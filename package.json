@@ -1,7 +1,7 @@
 {
-  "name": "pookie-army",
+  "name": "pookie-army-ultimate",
   "version": "1.0.0",
-  "description": "🌸 RINTU'S POOKIE ARMY 🌸",
+  "description": "🌸 RINTU'S ULTIMATE POOKIE ARMY 🌸",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
