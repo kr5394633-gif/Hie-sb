@@ -24,20 +24,8 @@
             padding: 30px;
             backdrop-filter: blur(10px);
         }
-        h1 {
-            text-align: center;
-            font-size: 2.5em;
-            background: linear-gradient(135deg, #ff69b4, #ff1493);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .subtitle {
-            text-align: center;
-            color: #ffb6c1;
-            font-size: 0.9em;
-            letter-spacing: 4px;
-            margin-bottom: 20px;
-        }
+        h1 { text-align: center; font-size: 2.5em; background: linear-gradient(135deg, #ff69b4, #ff1493); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { text-align: center; color: #ffb6c1; font-size: 0.9em; letter-spacing: 4px; margin-bottom: 20px; }
         .subtitle span { color: #ff69b4; font-weight: bold; }
         .status-card {
             background: rgba(255, 105, 180, 0.05);
@@ -88,19 +76,6 @@
         }
         .input-area textarea:focus { border-color: #ff69b4; }
         .input-area textarea::placeholder { color: #ffb6c155; }
-        .input-area input {
-            padding: 10px 16px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 105, 180, 0.25);
-            background: rgba(255, 255, 255, 0.03);
-            color: #ffe4ec;
-            font-size: 0.9em;
-            flex: 1;
-            min-width: 120px;
-            outline: none;
-        }
-        .input-area input:focus { border-color: #ff69b4; }
-        .input-area input::placeholder { color: #ffb6c155; }
         .input-area button {
             padding: 10px 20px;
             border: none;
@@ -116,16 +91,17 @@
         .input-area button.green { background: linear-gradient(135deg, #00cc88, #009966); }
         .input-area button.red { background: linear-gradient(135deg, #ff4444, #cc0000); }
         .input-area button.purple { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .input-area button.orange { background: linear-gradient(135deg, #ff8800, #cc6600); }
         .token-list {
             margin-top: 10px;
             color: #ffb6c1;
-            max-height: 200px;
+            max-height: 250px;
             overflow-y: auto;
             font-size: 0.85em;
         }
         .token-item {
             background: rgba(255, 105, 180, 0.04);
-            padding: 6px 14px;
+            padding: 8px 14px;
             margin: 3px 0;
             border-radius: 8px;
             border-left: 3px solid #ff69b4;
@@ -135,6 +111,9 @@
         }
         .token-item .online { color: #00ffcc; }
         .token-item .offline { color: #ff69b488; }
+        .token-item .error { color: #ff4444; }
+        .token-item .starting { color: #ffcc00; }
+        .token-item .tag { color: #ffb6c155; font-size: 0.7em; }
         .token-item .remove {
             background: none;
             border: none;
@@ -152,17 +131,18 @@
             padding-top: 15px;
         }
         .footer strong { color: #ff69b466; }
-        .debug-box {
-            background: rgba(255, 0, 0, 0.05);
-            border: 1px solid rgba(255, 68, 68, 0.2);
-            border-radius: 10px;
-            padding: 10px;
-            margin: 10px 0;
-            font-size: 0.8em;
-            color: #ff6b6b;
-            display: none;
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
         }
-        .debug-box.show { display: block; }
+        .status-dot.online { background: #00ffcc; }
+        .status-dot.offline { background: #ff69b488; }
+        .status-dot.error { background: #ff4444; }
+        .status-dot.starting { background: #ffcc00; animation: blink 0.5s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
     </style>
 </head>
 <body>
@@ -177,27 +157,26 @@
 
     <div class="stats-row">
         <div class="stat-box"><div class="num" id="statTokens">0</div><div class="label">Tokens</div></div>
-        <div class="stat-box"><div class="num" id="statBots">0</div><div class="label">Active</div></div>
+        <div class="stat-box"><div class="num" id="statBots">0</div><div class="label">Online Bots</div></div>
         <div class="stat-box"><div class="num" id="statVC">0</div><div class="label">In VC</div></div>
     </div>
-
-    <div class="debug-box" id="debugBox"></div>
 
     <div style="margin: 15px 0;">
         <div class="input-area">
             <textarea id="tokenInput" placeholder="Paste Discord tokens here...&#10;One per line"></textarea>
         </div>
         <div class="input-area">
-            <button onclick="addTokens()" class="purple">📥 Add Tokens</button>
+            <button onclick="addTokens()" class="purple">📥 Add & Start</button>
             <button onclick="startAll()" class="green">🚀 Start All</button>
             <button onclick="stopAll()" class="red">⏹️ Stop All</button>
             <button onclick="removeAllTokens()" class="red">🗑️ Remove All</button>
+            <button onclick="refreshStatus()" class="orange">🔄 Refresh</button>
         </div>
     </div>
 
     <div class="token-list" id="tokenList"><div style="color:#ffb6c155; text-align:center; padding:10px;">💖 No tokens yet</div></div>
 
-    <div class="footer">🌸 <strong>RINTU'S ARMY</strong> · v2.0 · 💕</div>
+    <div class="footer">🌸 <strong>RINTU'S ARMY</strong> · v3.0 · REAL SELFBOTS 💕</div>
 </div>
 
 <script>
@@ -217,27 +196,20 @@ function autoLogin() {
         if (data.token) {
             authToken = data.token;
             document.getElementById('statusMsg').textContent = '✅ Connected!';
-            document.getElementById('detailMsg').textContent = 'Ready! 🚀';
+            document.getElementById('detailMsg').textContent = 'Add tokens to start bots! 🚀';
             loadTokens();
             loadStatus();
             setInterval(loadTokens, 5000);
             setInterval(loadStatus, 5000);
         } else {
             document.getElementById('statusMsg').textContent = '❌ Login failed';
-            document.getElementById('detailMsg').textContent = 'Use rintu/pookie';
         }
     })
     .catch(err => {
         document.getElementById('statusMsg').textContent = '⚠️ Error';
         console.error('Login error:', err);
+        setTimeout(autoLogin, 3000);
     });
-}
-
-function showDebug(msg) {
-    const box = document.getElementById('debugBox');
-    box.textContent = msg;
-    box.classList.add('show');
-    setTimeout(() => box.classList.remove('show'), 8000);
 }
 
 function apiCall(endpoint, method, body) {
@@ -257,25 +229,18 @@ function apiCall(endpoint, method, body) {
 // ===== ADD TOKENS =====
 function addTokens() {
     const raw = document.getElementById('tokenInput').value.trim();
-    if (!raw) {
-        alert('🌸 Paste at least one token!');
-        return;
-    }
+    if (!raw) { alert('🌸 Paste at least one token!'); return; }
     
-    // Split by newline or comma
-    const tokenList = raw.split(/[\n,]+/).map(t => t.trim()).filter(t => t.length > 5);
-    
+    const tokenList = raw.split(/[\n,]+/).map(t => t.trim()).filter(t => t.length > 10);
     if (tokenList.length === 0) {
-        alert('🌸 No valid tokens found! Tokens must be at least 6 characters.');
+        alert('🌸 No valid tokens! Tokens should be at least 10 characters.');
         return;
     }
     
     document.getElementById('statusMsg').textContent = '⏳ Adding ' + tokenList.length + ' tokens...';
-    showDebug('📤 Sending ' + tokenList.length + ' tokens to server...');
     
-    apiCall('/api/add-tokens', 'POST', { tokens: tokenList })
+    apiCall('/api/add-tokens', 'POST', { tokens: tokenList, autoStart: true })
         .then(data => {
-            console.log('Response:', data);
             if (data.success) {
                 document.getElementById('tokenInput').value = '';
                 document.getElementById('statusMsg').textContent = '✅ Added ' + data.added + ' tokens!';
@@ -283,13 +248,11 @@ function addTokens() {
                 loadTokens();
                 loadStatus();
             } else {
-                showDebug('❌ Error: ' + JSON.stringify(data));
-                alert('❌ ' + (data.error || 'Unknown error'));
+                alert('❌ ' + (data.error || 'Failed'));
                 document.getElementById('statusMsg').textContent = '❌ Failed';
             }
         })
         .catch(err => {
-            showDebug('❌ Network error: ' + err.message);
             alert('❌ Network error: ' + err.message);
             document.getElementById('statusMsg').textContent = '❌ Error';
         });
@@ -309,10 +272,20 @@ function loadTokens() {
             }
             let html = '';
             for (let t of allTokens) {
-                const statusClass = t.status === 'active' ? 'online' : 'offline';
-                const statusText = t.status === 'active' ? '🩷 ONLINE' : '💤 OFFLINE';
+                let statusClass = t.status;
+                let statusText = t.status.toUpperCase();
+                if (t.status === 'active') { statusText = '🩷 ONLINE'; statusClass = 'online'; }
+                else if (t.status === 'inactive') { statusText = '💤 OFFLINE'; statusClass = 'offline'; }
+                else if (t.status === 'error') { statusText = '❌ ERROR'; statusClass = 'error'; }
+                else if (t.status === 'starting' || t.status === 'pending') { statusText = '⏳ STARTING'; statusClass = 'starting'; }
+                else { statusText = '❓ UNKNOWN'; statusClass = 'offline'; }
+                
                 html += `<div class="token-item">
-                    <span>🔑 ${t.id.slice(-8)} <span style="font-size:0.7em;color:#ffb6c155;">${t.username || ''}</span></span>
+                    <span>
+                        <span class="status-dot ${statusClass}"></span>
+                        🔑 ${t.id.slice(-8)}
+                        <span class="tag">${t.tag || t.username || ''}</span>
+                    </span>
                     <span class="${statusClass}">${statusText}</span>
                     <button class="remove" onclick="removeToken('${t.id}')">✕</button>
                 </div>`;
@@ -324,7 +297,7 @@ function loadTokens() {
 
 function removeToken(id) {
     if (!confirm('Remove this token?')) return;
-    apiCall('/api/remove-token', 'POST', { id }).then(() => loadTokens());
+    apiCall('/api/remove-token', 'POST', { id }).then(() => { loadTokens(); loadStatus(); });
 }
 
 function removeAllTokens() {
@@ -357,6 +330,15 @@ function loadStatus() {
         document.getElementById('statBots').textContent = data.activeBots || 0;
         document.getElementById('statVC').textContent = data.inVC || 0;
     });
+}
+
+function refreshStatus() {
+    loadTokens();
+    loadStatus();
+    document.getElementById('statusMsg').textContent = '🔄 Refreshed!';
+    setTimeout(() => {
+        document.getElementById('statusMsg').textContent = '✅ Connected!';
+    }, 2000);
 }
 
 window.onload = function() {
