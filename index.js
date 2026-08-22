@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 app.use(express.json());
 
-// ===== HTML DASHBOARD =====
+// ===== COMPLETE FIXED HTML =====
 const HTML = `<!DOCTYPE html>
 <html>
 <head>
@@ -89,7 +89,9 @@ const HTML = `<!DOCTYPE html>
     }
     .input-area button:hover { transform: scale(1.03); box-shadow: 0 0 30px rgba(255,20,147,0.3); }
     .input-area button.green { background: linear-gradient(135deg, #00cc88, #009966); }
+    .input-area button.green:hover { box-shadow: 0 0 30px rgba(0,204,136,0.3); }
     .input-area button.red { background: linear-gradient(135deg, #ff4444, #cc0000); }
+    .input-area button.red:hover { box-shadow: 0 0 30px rgba(255,68,68,0.3); }
     .input-area button.orange { background: linear-gradient(135deg, #ff8800, #cc6600); }
     #tokenList {
       margin-top: 15px;
@@ -140,6 +142,7 @@ const HTML = `<!DOCTYPE html>
       cursor: pointer;
       font-weight: bold;
       transition: 0.3s;
+      font-size: 1em;
     }
     .tab-btn:hover { background: rgba(255,105,180,0.1); }
     .tab-btn.active {
@@ -226,10 +229,10 @@ const HTML = `<!DOCTYPE html>
   </div>
 
   <div class="tab-bar">
-    <button class="tab-btn active" data-tab="tokens">🪙 Tokens</button>
-    <button class="tab-btn" data-tab="bots">🎮 Bots</button>
-    <button class="tab-btn" data-tab="invite">🔗 Invite</button>
-    <button class="tab-btn" data-tab="rename">✏️ Rename</button>
+    <button class="tab-btn active" onclick="switchTab('tokens')">🪙 Tokens</button>
+    <button class="tab-btn" onclick="switchTab('bots')">🎮 Bots</button>
+    <button class="tab-btn" onclick="switchTab('invite')">🔗 Invite</button>
+    <button class="tab-btn" onclick="switchTab('rename')">✏️ Rename</button>
   </div>
 
   <div id="tab-tokens" class="tab-content active">
@@ -272,186 +275,249 @@ const HTML = `<!DOCTYPE html>
 </div>
 
 <script>
-  let auth = '';
+  // ===== GLOBAL VARIABLES =====
+  var authToken = '';
   
-  // Tab switching
-  document.querySelectorAll('.tab-btn').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      document.querySelectorAll('.tab-btn').forEach(function(b) {
-        b.classList.remove('active');
-      });
-      document.querySelectorAll('.tab-content').forEach(function(c) {
-        c.classList.remove('active');
-      });
-      this.classList.add('active');
-      var tabId = this.getAttribute('data-tab');
-      document.getElementById('tab-' + tabId).classList.add('active');
-      if (tabId === 'bots') loadBots();
+  // ===== TAB SWITCHING =====
+  function switchTab(tabName) {
+    // Remove active from all tabs
+    var tabs = document.querySelectorAll('.tab-btn');
+    for (var i = 0; i < tabs.length; i++) {
+      tabs[i].classList.remove('active');
+    }
+    // Remove active from all content
+    var contents = document.querySelectorAll('.tab-content');
+    for (var i = 0; i < contents.length; i++) {
+      contents[i].classList.remove('active');
+    }
+    // Find and activate the clicked tab
+    var tabButtons = document.querySelectorAll('.tab-btn');
+    for (var i = 0; i < tabButtons.length; i++) {
+      if (tabButtons[i].getAttribute('onclick') === "switchTab('" + tabName + "')") {
+        tabButtons[i].classList.add('active');
+        break;
+      }
+    }
+    // Show the content
+    document.getElementById('tab-' + tabName).classList.add('active');
+    if (tabName === 'bots') {
+      loadBots();
+    }
+  }
+
+  // ===== API CALL =====
+  function apiCall(endpoint, method, body) {
+    return new Promise(function(resolve, reject) {
+      method = method || 'GET';
+      var opts = {
+        method: method,
+        headers: {
+          'Authorization': authToken,
+          'Content-Type': 'application/json'
+        }
+      };
+      if (body) {
+        opts.body = JSON.stringify(body);
+      }
+      fetch(endpoint, opts)
+        .then(function(res) { return res.json(); })
+        .then(function(data) { resolve(data); })
+        .catch(function(err) { reject(err); });
     });
-  });
-  
-  async function autoLogin() {
-    try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'rintu', password: 'pookie' })
-      });
-      const data = await res.json();
+  }
+
+  // ===== AUTO LOGIN =====
+  function autoLogin() {
+    fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'rintu', password: 'pookie' })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
       if (data.token) {
-        auth = data.token;
+        authToken = data.token;
         document.getElementById('statusMsg').textContent = '✅ Logged in as rintu';
+        document.getElementById('detailMsg').textContent = 'Add tokens to start your army!';
         loadTokens();
         loadBots();
         setInterval(loadTokens, 5000);
         setInterval(loadBots, 5000);
       } else {
-        document.getElementById('statusMsg').textContent = '❌ Login failed - check server';
+        document.getElementById('statusMsg').textContent = '❌ Login failed';
       }
-    } catch(e) {
+    })
+    .catch(function(err) {
       document.getElementById('statusMsg').textContent = '⚠️ Connecting...';
-      console.error('Login error:', e);
-    }
+      console.error('Login error:', err);
+    });
   }
 
-  async function apiCall(endpoint, method, body) {
-    method = method || 'GET';
-    const opts = {
-      method: method,
-      headers: { 
-        'Authorization': auth, 
-        'Content-Type': 'application/json' 
-      }
-    };
-    if (body) opts.body = JSON.stringify(body);
-    try {
-      const res = await fetch(endpoint, opts);
-      return await res.json();
-    } catch(e) {
-      console.error('API Error:', e);
-      return { error: 'Network error' };
+  // ===== ADD TOKEN =====
+  function addToken() {
+    var input = document.getElementById('tokenInput');
+    var token = input.value.trim();
+    if (!token) {
+      alert('🌸 Paste a token!');
+      return;
     }
+    apiCall('/api/add-token', 'POST', { token: token })
+      .then(function(data) {
+        if (data.success) {
+          input.value = '';
+          loadTokens();
+          document.getElementById('statusMsg').textContent = '✅ Token added!';
+        } else {
+          alert('❌ ' + (data.error || 'Failed'));
+        }
+      })
+      .catch(function(err) {
+        alert('❌ Error: ' + err.message);
+      });
   }
 
-  async function addToken() {
-    const token = document.getElementById('tokenInput').value.trim();
-    if (!token) return alert('🌸 Paste a token!');
-    const data = await apiCall('/api/add-token', 'POST', { token: token });
-    if (data.success) {
-      document.getElementById('tokenInput').value = '';
-      loadTokens();
-      document.getElementById('statusMsg').textContent = '✅ Token added!';
-    } else {
-      alert('❌ ' + (data.error || 'Failed'));
-    }
+  // ===== LOAD TOKENS =====
+  function loadTokens() {
+    if (!authToken) return;
+    apiCall('/api/status')
+      .then(function(data) {
+        var container = document.getElementById('tokenList');
+        if (!data || data.length === 0) {
+          container.innerHTML = '<div style="color:#ffb6c155; text-align:center; padding:15px;">💖 No tokens yet</div>';
+          return;
+        }
+        var html = '';
+        for (var i = 0; i < data.length; i++) {
+          var t = data[i];
+          html += '<div class="token-item">';
+          html += '<span>🔑 ' + t.id.slice(-8) + '</span>';
+          html += '<span class="' + (t.hasBot ? 'online' : 'offline') + '">' + (t.hasBot ? '🩷 ONLINE' : '💤 OFFLINE') + '</span>';
+          html += '<button class="remove" onclick="removeToken(\'' + t.id + '\')">✕</button>';
+          html += '</div>';
+        }
+        container.innerHTML = html;
+      })
+      .catch(function(err) {
+        console.error('Load tokens error:', err);
+      });
   }
 
-  async function loadTokens() {
-    if (!auth) return;
-    try {
-      const data = await apiCall('/api/status');
-      const container = document.getElementById('tokenList');
-      if (!data || data.length === 0) {
-        container.innerHTML = '<div style="color:#ffb6c155; text-align:center; padding:15px;">💖 No tokens yet</div>';
-        return;
-      }
-      var html = '';
-      for (var i = 0; i < data.length; i++) {
-        var t = data[i];
-        html += '<div class="token-item">';
-        html += '<span>🔑 ' + t.id.slice(-8) + '</span>';
-        html += '<span class="' + (t.hasBot ? 'online' : 'offline') + '">' + (t.hasBot ? '🩷 ONLINE' : '💤 OFFLINE') + '</span>';
-        html += '<button class="remove" onclick="removeToken(\'' + t.id + '\')">✕</button>';
-        html += '</div>';
-      }
-      container.innerHTML = html;
-    } catch(e) {
-      console.error('Load tokens error:', e);
-    }
-  }
-
-  async function removeToken(id) {
+  // ===== REMOVE TOKEN =====
+  function removeToken(id) {
     if (!confirm('Remove this token?')) return;
-    const data = await apiCall('/api/remove-token', 'POST', { id: id });
-    if (data.success) loadTokens();
+    apiCall('/api/remove-token', 'POST', { id: id })
+      .then(function(data) {
+        if (data.success) loadTokens();
+      });
   }
 
-  async function startAll() {
-    const data = await apiCall('/api/start-all', 'POST');
-    document.getElementById('statusMsg').textContent = '🚀 Started ' + (data.started || 0) + ' bot(s)!';
-    loadTokens();
-    loadBots();
+  // ===== START ALL =====
+  function startAll() {
+    apiCall('/api/start-all', 'POST')
+      .then(function(data) {
+        document.getElementById('statusMsg').textContent = '🚀 Started ' + (data.started || 0) + ' bot(s)!';
+        loadTokens();
+        loadBots();
+      });
   }
 
-  async function stopAll() {
-    const data = await apiCall('/api/stop-all', 'POST');
-    document.getElementById('statusMsg').textContent = '⏹️ Stopped ' + (data.stopped || 0) + ' bot(s)';
-    loadTokens();
-    loadBots();
+  // ===== STOP ALL =====
+  function stopAll() {
+    apiCall('/api/stop-all', 'POST')
+      .then(function(data) {
+        document.getElementById('statusMsg').textContent = '⏹️ Stopped ' + (data.stopped || 0) + ' bot(s)';
+        loadTokens();
+        loadBots();
+      });
   }
 
-  async function loadBots() {
-    if (!auth) return;
-    try {
-      const data = await apiCall('/api/bots');
-      const container = document.getElementById('botGrid');
-      if (!data || data.length === 0) {
-        container.innerHTML = '<div style="color:#ffb6c155; text-align:center; padding:20px; grid-column:1/-1;">💤 No active bots</div>';
-        return;
-      }
-      var html = '';
-      for (var i = 0; i < data.length; i++) {
-        var b = data[i];
-        html += '<div class="bot-card">';
-        html += '<div class="name">' + (b.username || 'Bot') + '</div>';
-        html += '<div class="status">' + (b.inVC ? '🔊 In VC' : '💤 Idle') + '</div>';
-        html += '<div class="controls">';
-        html += '<button onclick="botAction(\'' + b.id + '\',\'join\')">🔊 Join</button>';
-        html += '<button onclick="botAction(\'' + b.id + '\',\'leave\')">🚪 Leave</button>';
-        html += '<button onclick="botAction(\'' + b.id + '\',\'volume\',\'10\')">🔊 1000%</button>';
-        html += '</div></div>';
-      }
-      container.innerHTML = html;
-    } catch(e) {
-      console.error('Load bots error:', e);
-    }
+  // ===== LOAD BOTS =====
+  function loadBots() {
+    if (!authToken) return;
+    apiCall('/api/bots')
+      .then(function(data) {
+        var container = document.getElementById('botGrid');
+        if (!data || data.length === 0) {
+          container.innerHTML = '<div style="color:#ffb6c155; text-align:center; padding:20px; grid-column:1/-1;">💤 No active bots</div>';
+          return;
+        }
+        var html = '';
+        for (var i = 0; i < data.length; i++) {
+          var b = data[i];
+          html += '<div class="bot-card">';
+          html += '<div class="name">' + (b.username || 'Bot') + '</div>';
+          html += '<div class="status">' + (b.inVC ? '🔊 In VC' : '💤 Idle') + '</div>';
+          html += '<div class="controls">';
+          html += '<button onclick="botAction(\'' + b.id + '\',\'join\')">🔊 Join</button>';
+          html += '<button onclick="botAction(\'' + b.id + '\',\'leave\')">🚪 Leave</button>';
+          html += '<button onclick="botAction(\'' + b.id + '\',\'volume\',\'10\')">🔊 1000%</button>';
+          html += '</div></div>';
+        }
+        container.innerHTML = html;
+      })
+      .catch(function(err) {
+        console.error('Load bots error:', err);
+      });
   }
 
-  async function botAction(id, action, value) {
+  // ===== BOT ACTION =====
+  function botAction(id, action, value) {
     value = value || null;
-    const data = await apiCall('/api/bot-action', 'POST', { id: id, action: action, value: value });
-    if (data.success) loadBots();
+    apiCall('/api/bot-action', 'POST', { id: id, action: action, value: value })
+      .then(function(data) {
+        if (data.success) loadBots();
+      });
   }
 
-  async function renameAll() {
-    const name = document.getElementById('newNameInput').value.trim();
-    if (!name) return alert('🌸 Enter a name!');
-    const data = await apiCall('/api/rename-all', 'POST', { name: name });
-    document.getElementById('statusMsg').textContent = '✏️ Renamed ' + (data.renamed || 0) + ' bot(s)!';
-    loadBots();
+  // ===== RENAME ALL =====
+  function renameAll() {
+    var input = document.getElementById('newNameInput');
+    var name = input.value.trim();
+    if (!name) {
+      alert('🌸 Enter a name!');
+      return;
+    }
+    apiCall('/api/rename-all', 'POST', { name: name })
+      .then(function(data) {
+        document.getElementById('statusMsg').textContent = '✏️ Renamed ' + (data.renamed || 0) + ' bot(s)!';
+        loadBots();
+      });
   }
 
-  async function resetNames() {
-    const data = await apiCall('/api/reset-names', 'POST');
-    document.getElementById('statusMsg').textContent = '↩️ Reset ' + (data.reset || 0) + ' bot(s)';
-    loadBots();
+  // ===== RESET NAMES =====
+  function resetNames() {
+    apiCall('/api/reset-names', 'POST')
+      .then(function(data) {
+        document.getElementById('statusMsg').textContent = '↩️ Reset ' + (data.reset || 0) + ' bot(s)';
+        loadBots();
+      });
   }
 
-  async function inviteJoin() {
-    const invite = document.getElementById('inviteInput').value.trim();
-    if (!invite) return alert('🌸 Enter an invite!');
-    const data = await apiCall('/api/invite-join', 'POST', { invite: invite });
-    document.getElementById('statusMsg').textContent = '🚀 ' + (data.joined || 0) + ' bot(s) joined!';
-    loadBots();
+  // ===== INVITE JOIN =====
+  function inviteJoin() {
+    var input = document.getElementById('inviteInput');
+    var invite = input.value.trim();
+    if (!invite) {
+      alert('🌸 Enter an invite!');
+      return;
+    }
+    apiCall('/api/invite-join', 'POST', { invite: invite })
+      .then(function(data) {
+        document.getElementById('statusMsg').textContent = '🚀 ' + (data.joined || 0) + ' bot(s) joined!';
+        loadBots();
+      });
   }
 
-  async function leaveAll() {
-    const data = await apiCall('/api/leave-all', 'POST');
-    document.getElementById('statusMsg').textContent = '🚪 ' + (data.left || 0) + ' bot(s) left';
-    loadBots();
+  // ===== LEAVE ALL =====
+  function leaveAll() {
+    apiCall('/api/leave-all', 'POST')
+      .then(function(data) {
+        document.getElementById('statusMsg').textContent = '🚪 ' + (data.left || 0) + ' bot(s) left';
+        loadBots();
+      });
   }
 
-  // Start when page loads
+  // ===== START =====
   window.onload = function() {
     autoLogin();
   };
@@ -470,94 +536,71 @@ const tokens = {};
 const sessions = {};
 
 // ===== API ROUTES =====
-
-// Login
 app.post('/api/login', (req, res) => {
-  console.log('📨 Login request:', req.body);
+  console.log('📨 Login:', req.body);
   const { username, password } = req.body;
   if (users[username] && users[username] === password) {
     res.json({ token: 'pookie_token_' + username, userId: username });
   } else {
-    res.status(401).json({ error: 'Invalid. Use rintu/pookie' });
+    res.status(401).json({ error: 'Invalid' });
   }
 });
 
-// Auth middleware
 function auth(req, res, next) {
   const token = req.headers['authorization'];
-  console.log('🔑 Auth token:', token);
   if (!token || !token.startsWith('pookie_token_')) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   req.userId = token.replace('pookie_token_', '');
-  if (!users[req.userId]) return res.status(401).json({ error: 'Invalid user' });
+  if (!users[req.userId]) return res.status(401).json({ error: 'Invalid' });
   next();
 }
 
-// Add token
 app.post('/api/add-token', auth, (req, res) => {
-  console.log('📨 Add token request for user:', req.userId);
+  console.log('📨 Add token for:', req.userId);
   const { token } = req.body;
   if (!tokens[req.userId]) tokens[req.userId] = [];
   if (tokens[req.userId].find(t => t.token === token)) {
     return res.status(400).json({ error: 'Already added' });
   }
   const id = 'tok_' + Date.now().toString(36);
-  tokens[req.userId].push({ token, status: 'inactive', id: id });
-  console.log('✅ Token added:', id);
-  res.json({ success: true, id: id });
+  tokens[req.userId].push({ token, status: 'inactive', id });
+  res.json({ success: true });
 });
 
-// Get status
 app.get('/api/status', auth, (req, res) => {
-  console.log('📨 Status request for user:', req.userId);
   const userTokens = tokens[req.userId] || [];
-  const result = userTokens.map(t => ({
+  res.json(userTokens.map(t => ({
     id: t.id,
     status: t.status,
     hasBot: !!sessions[req.userId]?.[t.id]
-  }));
-  res.json(result);
+  })));
 });
 
-// Remove token
 app.post('/api/remove-token', auth, (req, res) => {
-  console.log('📨 Remove token request:', req.body);
   const { id } = req.body;
   const userTokens = tokens[req.userId] || [];
   const idx = userTokens.findIndex(t => t.id === id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
-  if (sessions[req.userId]?.[id]) {
-    delete sessions[req.userId][id];
-  }
   userTokens.splice(idx, 1);
   res.json({ success: true });
 });
 
-// Start all
 app.post('/api/start-all', auth, (req, res) => {
-  console.log('📨 Start all request for user:', req.userId);
   const userTokens = tokens[req.userId] || [];
   let started = 0;
   for (let t of userTokens) {
     if (t.status === 'inactive') {
       t.status = 'active';
       if (!sessions[req.userId]) sessions[req.userId] = {};
-      sessions[req.userId][t.id] = { 
-        username: 'Bot_' + t.id.slice(-4), 
-        inVC: false,
-        token: t.token
-      };
+      sessions[req.userId][t.id] = { username: 'Bot_' + t.id.slice(-4), inVC: false };
       started++;
     }
   }
-  console.log('✅ Started', started, 'bots');
   res.json({ started });
 });
 
-// Stop all
 app.post('/api/stop-all', auth, (req, res) => {
-  console.log('📨 Stop all request for user:', req.userId);
   const userTokens = tokens[req.userId] || [];
   let stopped = 0;
   for (let t of userTokens) {
@@ -572,9 +615,7 @@ app.post('/api/stop-all', auth, (req, res) => {
   res.json({ stopped });
 });
 
-// Get bots
 app.get('/api/bots', auth, (req, res) => {
-  console.log('📨 Bots request for user:', req.userId);
   const userTokens = tokens[req.userId] || [];
   const bots = [];
   for (let t of userTokens) {
@@ -591,25 +632,17 @@ app.get('/api/bots', auth, (req, res) => {
   res.json(bots);
 });
 
-// Bot action
 app.post('/api/bot-action', auth, (req, res) => {
-  console.log('📨 Bot action:', req.body);
   const { id, action, value } = req.body;
-  const userTokens = tokens[req.userId] || [];
-  const t = userTokens.find(t => t.id === id);
-  if (!t) return res.status(404).json({ error: 'Not found' });
   const bot = sessions[req.userId]?.[id];
   if (bot) {
-    if (action === 'join') { bot.inVC = true; console.log('🔊 Bot', id, 'joined VC'); }
-    if (action === 'leave') { bot.inVC = false; console.log('🚪 Bot', id, 'left VC'); }
-    if (action === 'volume') { console.log('🔊 Volume set to', value); }
+    if (action === 'join') bot.inVC = true;
+    if (action === 'leave') bot.inVC = false;
   }
   res.json({ success: true });
 });
 
-// Rename all
 app.post('/api/rename-all', auth, (req, res) => {
-  console.log('📨 Rename all request:', req.body);
   const { name } = req.body;
   const userTokens = tokens[req.userId] || [];
   let renamed = 0;
@@ -622,9 +655,7 @@ app.post('/api/rename-all', auth, (req, res) => {
   res.json({ renamed });
 });
 
-// Reset names
 app.post('/api/reset-names', auth, (req, res) => {
-  console.log('📨 Reset names request');
   const userTokens = tokens[req.userId] || [];
   let reset = 0;
   for (let t of userTokens) {
@@ -636,10 +667,7 @@ app.post('/api/reset-names', auth, (req, res) => {
   res.json({ reset });
 });
 
-// Invite join
 app.post('/api/invite-join', auth, (req, res) => {
-  console.log('📨 Invite join request:', req.body);
-  const { invite } = req.body;
   const userTokens = tokens[req.userId] || [];
   let joined = 0;
   for (let t of userTokens) {
@@ -651,9 +679,7 @@ app.post('/api/invite-join', auth, (req, res) => {
   res.json({ joined });
 });
 
-// Leave all
 app.post('/api/leave-all', auth, (req, res) => {
-  console.log('📨 Leave all request');
   const userTokens = tokens[req.userId] || [];
   let left = 0;
   for (let t of userTokens) {
@@ -665,23 +691,19 @@ app.post('/api/leave-all', auth, (req, res) => {
   res.json({ left });
 });
 
-// Test endpoint
 app.get('/api/test', (req, res) => {
   res.json({ status: 'ok', message: '🌸 Pookie Army is alive!' });
 });
 
-// Health check
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
-// ===== START SERVER =====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log('🔥 ==========================================');
   console.log('🌸 POOKIE ARMY LIVE on port ' + PORT);
   console.log('🌐 Open: http://localhost:' + PORT);
   console.log('🔐 Login: rintu / pookie');
-  console.log('📨 All API routes are ready!');
   console.log('🔥 ==========================================');
 });
