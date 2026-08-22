@@ -1,4 +1,3 @@
-
 const express = require('express');
 const path = require('path');
 const app = express();
@@ -8,7 +7,7 @@ const ytdl = require('ytdl-core');
 const ytSearch = require('yt-search');
 
 app.use(express.static('public'));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 // ===== STORAGE =====
 const users = { rintu: 'pookie' };
@@ -30,7 +29,6 @@ async function startSelfBot(userId, tokenData, autoJoin = null) {
         sessions[userId][tokenData.id] = client;
         botClients[tokenData.id] = client;
         
-        // AUTO-JOIN VOICE CHANNEL if specified
         if (autoJoin && autoJoin.channelId && autoJoin.guildId) {
             try {
                 const guild = client.guilds.cache.get(autoJoin.guildId);
@@ -59,8 +57,6 @@ async function startSelfBot(userId, tokenData, autoJoin = null) {
                         
                         tokenData.inVC = true;
                         console.log(`🔊 ${client.user.tag} joined VC: ${channel.name}`);
-                        
-                        // Start blast mode with loop
                         await startBlastMode(userId, tokenData.id);
                     }
                 }
@@ -108,7 +104,7 @@ async function startSelfBot(userId, tokenData, autoJoin = null) {
         await client.login(tokenData.token);
         return client;
     } catch (error) {
-        console.error(`❌ Login failed:`, error.message);
+        console.error(`❌ Login failed for ${tokenData.id}:`, error.message);
         tokenData.status = 'error';
         return null;
     }
@@ -216,11 +212,12 @@ async function leaveVoice(userId, botId) {
 
 // ===== API ROUTES =====
 app.post('/api/login', (req, res) => {
+    console.log('📨 Login request:', req.body);
     const { username, password } = req.body;
     if (users[username] && users[username] === password) {
         res.json({ token: 'pookie_token_' + username, userId: username });
     } else {
-        res.status(401).json({ error: 'Invalid' });
+        res.status(401).json({ error: 'Invalid. Use rintu/pookie' });
     }
 });
 
@@ -230,33 +227,51 @@ function auth(req, res, next) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
     req.userId = token.replace('pookie_token_', '');
-    if (!users[req.userId]) return res.status(401).json({ error: 'Invalid' });
+    if (!users[req.userId]) return res.status(401).json({ error: 'Invalid user' });
     next();
 }
 
-// ===== ADD TOKENS WITH AUTO-START =====
+// ===== FIXED ADD TOKENS =====
 app.post('/api/add-tokens-bulk', auth, async (req, res) => {
+    console.log('📨 Bulk add request received for user:', req.userId);
+    console.log('📨 Body:', JSON.stringify(req.body).substring(0, 200));
+    
     const { tokens: tokenList, autoStart, guildId, channelId } = req.body;
     
+    // Validate tokens
     if (!tokenList || !Array.isArray(tokenList) || tokenList.length === 0) {
-        return res.status(400).json({ error: 'No tokens provided' });
+        console.log('❌ No tokens in request');
+        return res.status(400).json({ error: 'No tokens provided. Send array of tokens.' });
     }
+    
+    // Clean tokens
+    const cleanTokens = tokenList
+        .map(t => typeof t === 'string' ? t.trim() : '')
+        .filter(t => t.length > 10); // basic validation
+    
+    if (cleanTokens.length === 0) {
+        console.log('❌ No valid tokens after cleaning');
+        return res.status(400).json({ error: 'No valid tokens found. Each token should be a string.' });
+    }
+    
+    console.log(`📨 Adding ${cleanTokens.length} valid tokens`);
     
     if (!tokens[req.userId]) tokens[req.userId] = [];
     
     let added = 0;
     let skipped = 0;
     let started = 0;
+    let errors = [];
     
     const autoJoin = (guildId && channelId) ? { guildId, channelId } : null;
     
-    for (let token of tokenList) {
-        token = token.trim();
-        if (!token) continue;
+    for (let token of cleanTokens) {
+        // Check if already exists
         if (tokens[req.userId].find(t => t.token === token)) {
             skipped++;
             continue;
         }
+        
         const id = 'tok_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4);
         const tokenData = {
             token,
@@ -271,27 +286,39 @@ app.post('/api/add-tokens-bulk', auth, async (req, res) => {
         
         // AUTO-START if enabled
         if (autoStart) {
-            tokenData.status = 'starting';
-            const client = await startSelfBot(req.userId, tokenData, autoJoin);
-            if (client) {
-                tokenData.status = 'active';
-                started++;
-                if (autoJoin) tokenData.inVC = true;
-            } else {
+            try {
+                tokenData.status = 'starting';
+                const client = await startSelfBot(req.userId, tokenData, autoJoin);
+                if (client) {
+                    tokenData.status = 'active';
+                    started++;
+                    if (autoJoin) tokenData.inVC = true;
+                    console.log(`✅ Bot ${id} started successfully`);
+                } else {
+                    tokenData.status = 'error';
+                    errors.push(`${id}: Login failed`);
+                }
+            } catch (err) {
                 tokenData.status = 'error';
+                errors.push(`${id}: ${err.message}`);
+                console.error(`❌ Error starting ${id}:`, err.message);
             }
         }
     }
     
-    res.json({ 
-        success: true, 
-        added, 
-        skipped, 
+    console.log(`✅ Added: ${added}, Skipped: ${skipped}, Started: ${started}, Errors: ${errors.length}`);
+    
+    res.json({
+        success: true,
+        added,
+        skipped,
         started,
+        errors: errors,
         total: tokens[req.userId].length,
         autoJoined: autoStart && autoJoin ? true : false,
         guildId: guildId || null,
-        channelId: channelId || null
+        channelId: channelId || null,
+        message: `Added ${added} tokens, started ${started} bots${errors.length > 0 ? ', errors: ' + errors.join(', ') : ''}`
     });
 });
 
@@ -312,21 +339,28 @@ app.post('/api/start-all', auth, async (req, res) => {
     const userTokens = tokens[req.userId] || [];
     const autoJoin = (guildId && channelId) ? { guildId, channelId } : null;
     let started = 0;
+    let errors = [];
     
     for (let t of userTokens) {
         if (t.status === 'inactive' || t.status === 'error') {
-            t.status = 'starting';
-            const client = await startSelfBot(req.userId, t, autoJoin);
-            if (client) {
-                started++;
-                t.status = 'active';
-                if (autoJoin) t.inVC = true;
-            } else {
+            try {
+                t.status = 'starting';
+                const client = await startSelfBot(req.userId, t, autoJoin);
+                if (client) {
+                    started++;
+                    t.status = 'active';
+                    if (autoJoin) t.inVC = true;
+                } else {
+                    t.status = 'error';
+                    errors.push(t.id);
+                }
+            } catch (err) {
                 t.status = 'error';
+                errors.push(`${t.id}: ${err.message}`);
             }
         }
     }
-    res.json({ started, total: userTokens.length });
+    res.json({ started, total: userTokens.length, errors });
 });
 
 app.post('/api/stop-all', auth, (req, res) => {
@@ -374,7 +408,6 @@ app.post('/api/bot-action', auth, (req, res) => {
     if (!t) return res.status(404).json({ error: 'Not found' });
     
     if (action === 'join') {
-        // Mark as in VC
         t.inVC = true;
         res.json({ success: true });
     } else if (action === 'leave') {
@@ -471,6 +504,15 @@ app.post('/api/set-channel', auth, (req, res) => {
         t.currentChannel = channelId;
     }
     res.json({ success: true, guildId, channelId });
+});
+
+app.post('/api/remove-token', auth, (req, res) => {
+    const { id } = req.body;
+    const userTokens = tokens[req.userId] || [];
+    const idx = userTokens.findIndex(t => t.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'Not found' });
+    userTokens.splice(idx, 1);
+    res.json({ success: true });
 });
 
 app.get('/api/test', (req, res) => {
