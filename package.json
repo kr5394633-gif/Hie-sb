@@ -2,9 +2,9 @@
   "name": "pookie-army",
   "version": "1.0.0",
   "description": "🌸 RINTU'S POOKIE ARMY 🌸",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2"
