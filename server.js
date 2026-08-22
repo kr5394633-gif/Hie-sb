@@ -2,7 +2,6 @@ const express = require('express');
 const path = require('path');
 const app = express();
 
-// Serve static files from public folder
 app.use(express.static('public'));
 app.use(express.json());
 
@@ -10,6 +9,7 @@ app.use(express.json());
 const users = { rintu: 'pookie' };
 const tokens = {};
 const sessions = {};
+const voiceChannels = {};
 
 // ===== API ROUTES =====
 app.post('/api/login', (req, res) => {
@@ -32,6 +32,50 @@ function auth(req, res, next) {
   next();
 }
 
+// ===== BULK ADD TOKENS =====
+app.post('/api/add-tokens-bulk', auth, (req, res) => {
+  console.log('📨 Bulk add tokens for:', req.userId);
+  const { tokens: tokenList } = req.body;
+  
+  if (!tokenList || !Array.isArray(tokenList) || tokenList.length === 0) {
+    return res.status(400).json({ error: 'No tokens provided' });
+  }
+  
+  if (!tokens[req.userId]) tokens[req.userId] = [];
+  
+  let added = 0;
+  let skipped = 0;
+  
+  for (let token of tokenList) {
+    token = token.trim();
+    if (!token) continue;
+    
+    // Check if already exists
+    if (tokens[req.userId].find(t => t.token === token)) {
+      skipped++;
+      continue;
+    }
+    
+    const id = 'tok_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4);
+    tokens[req.userId].push({ 
+      token, 
+      status: 'inactive', 
+      id,
+      inVC: false,
+      username: 'Bot_' + id.slice(-6)
+    });
+    added++;
+  }
+  
+  res.json({ 
+    success: true, 
+    added: added, 
+    skipped: skipped,
+    total: tokens[req.userId].length
+  });
+});
+
+// ===== SINGLE ADD TOKEN (keep for compatibility) =====
 app.post('/api/add-token', auth, (req, res) => {
   console.log('📨 Add token for:', req.userId);
   const { token } = req.body;
@@ -39,9 +83,15 @@ app.post('/api/add-token', auth, (req, res) => {
   if (tokens[req.userId].find(t => t.token === token)) {
     return res.status(400).json({ error: 'Already added' });
   }
-  const id = 'tok_' + Date.now().toString(36);
-  tokens[req.userId].push({ token, status: 'inactive', id });
-  res.json({ success: true, id: id });
+  const id = 'tok_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4);
+  tokens[req.userId].push({ 
+    token, 
+    status: 'inactive', 
+    id,
+    inVC: false,
+    username: 'Bot_' + id.slice(-6)
+  });
+  res.json({ success: true, id: id, total: tokens[req.userId].length });
 });
 
 app.get('/api/status', auth, (req, res) => {
@@ -49,7 +99,9 @@ app.get('/api/status', auth, (req, res) => {
   res.json(userTokens.map(t => ({
     id: t.id,
     status: t.status,
-    hasBot: !!sessions[req.userId]?.[t.id]
+    hasBot: !!sessions[req.userId]?.[t.id],
+    username: t.username || 'Bot',
+    inVC: t.inVC || false
   })));
 });
 
@@ -58,8 +110,22 @@ app.post('/api/remove-token', auth, (req, res) => {
   const userTokens = tokens[req.userId] || [];
   const idx = userTokens.findIndex(t => t.id === id);
   if (idx === -1) return res.status(404).json({ error: 'Not found' });
+  if (sessions[req.userId]?.[id]) {
+    delete sessions[req.userId][id];
+  }
   userTokens.splice(idx, 1);
   res.json({ success: true });
+});
+
+app.post('/api/remove-all-tokens', auth, (req, res) => {
+  console.log('📨 Remove all tokens for:', req.userId);
+  const userTokens = tokens[req.userId] || [];
+  let removed = userTokens.length;
+  tokens[req.userId] = [];
+  if (sessions[req.userId]) {
+    sessions[req.userId] = {};
+  }
+  res.json({ success: true, removed: removed });
 });
 
 app.post('/api/start-all', auth, (req, res) => {
@@ -69,11 +135,15 @@ app.post('/api/start-all', auth, (req, res) => {
     if (t.status === 'inactive') {
       t.status = 'active';
       if (!sessions[req.userId]) sessions[req.userId] = {};
-      sessions[req.userId][t.id] = { username: 'Bot_' + t.id.slice(-4), inVC: false };
+      sessions[req.userId][t.id] = { 
+        username: t.username || 'Bot_' + t.id.slice(-6),
+        inVC: false,
+        token: t.token
+      };
       started++;
     }
   }
-  res.json({ started });
+  res.json({ started, total: userTokens.length });
 });
 
 app.post('/api/stop-all', auth, (req, res) => {
@@ -82,6 +152,7 @@ app.post('/api/stop-all', auth, (req, res) => {
   for (let t of userTokens) {
     if (t.status === 'active') {
       t.status = 'inactive';
+      t.inVC = false;
       if (sessions[req.userId]?.[t.id]) {
         delete sessions[req.userId][t.id];
         stopped++;
@@ -95,12 +166,11 @@ app.get('/api/bots', auth, (req, res) => {
   const userTokens = tokens[req.userId] || [];
   const bots = [];
   for (let t of userTokens) {
-    const bot = sessions[req.userId]?.[t.id];
-    if (bot && t.status === 'active') {
+    if (t.status === 'active') {
       bots.push({
         id: t.id,
-        username: bot.username || 'Bot',
-        inVC: bot.inVC || false,
+        username: t.username || 'Bot',
+        inVC: t.inVC || false,
         status: t.status
       });
     }
@@ -108,14 +178,52 @@ app.get('/api/bots', auth, (req, res) => {
   res.json(bots);
 });
 
-app.post('/api/bot-action', auth, (req, res) => {
-  const { id, action, value } = req.body;
-  const bot = sessions[req.userId]?.[id];
-  if (bot) {
-    if (action === 'join') bot.inVC = true;
-    if (action === 'leave') bot.inVC = false;
+// ===== JOIN VOICE CHANNEL =====
+app.post('/api/join-channel', auth, (req, res) => {
+  const { channelId, guildId } = req.body;
+  console.log('📨 Join channel request:', { channelId, guildId, user: req.userId });
+  
+  if (!channelId || !guildId) {
+    return res.status(400).json({ error: 'Channel ID and Guild ID required' });
   }
-  res.json({ success: true });
+  
+  const userTokens = tokens[req.userId] || [];
+  let joined = 0;
+  
+  for (let t of userTokens) {
+    if (t.status === 'active') {
+      t.inVC = true;
+      t.currentChannel = channelId;
+      t.currentGuild = guildId;
+      joined++;
+    }
+  }
+  
+  res.json({ 
+    success: true, 
+    joined: joined,
+    channel: channelId,
+    guild: guildId,
+    message: joined + ' bot(s) joined voice channel!'
+  });
+});
+
+// ===== LEAVE VOICE CHANNEL =====
+app.post('/api/leave-channel', auth, (req, res) => {
+  console.log('📨 Leave channel request for:', req.userId);
+  const userTokens = tokens[req.userId] || [];
+  let left = 0;
+  
+  for (let t of userTokens) {
+    if (t.inVC) {
+      t.inVC = false;
+      t.currentChannel = null;
+      t.currentGuild = null;
+      left++;
+    }
+  }
+  
+  res.json({ success: true, left: left });
 });
 
 app.post('/api/rename-all', auth, (req, res) => {
@@ -123,8 +231,11 @@ app.post('/api/rename-all', auth, (req, res) => {
   const userTokens = tokens[req.userId] || [];
   let renamed = 0;
   for (let t of userTokens) {
-    if (sessions[req.userId]?.[t.id]) {
-      sessions[req.userId][t.id].username = name + '_' + t.id.slice(-4);
+    if (t.status === 'active') {
+      t.username = name + '_' + t.id.slice(-4);
+      if (sessions[req.userId]?.[t.id]) {
+        sessions[req.userId][t.id].username = t.username;
+      }
       renamed++;
     }
   }
@@ -135,8 +246,11 @@ app.post('/api/reset-names', auth, (req, res) => {
   const userTokens = tokens[req.userId] || [];
   let reset = 0;
   for (let t of userTokens) {
-    if (sessions[req.userId]?.[t.id]) {
-      sessions[req.userId][t.id].username = 'Bot_' + t.id.slice(-4);
+    if (t.status === 'active') {
+      t.username = 'Bot_' + t.id.slice(-6);
+      if (sessions[req.userId]?.[t.id]) {
+        sessions[req.userId][t.id].username = t.username;
+      }
       reset++;
     }
   }
@@ -144,11 +258,12 @@ app.post('/api/reset-names', auth, (req, res) => {
 });
 
 app.post('/api/invite-join', auth, (req, res) => {
+  const { invite } = req.body;
   const userTokens = tokens[req.userId] || [];
   let joined = 0;
   for (let t of userTokens) {
-    if (sessions[req.userId]?.[t.id] && t.status === 'active') {
-      sessions[req.userId][t.id].inVC = true;
+    if (t.status === 'active') {
+      t.inVC = true;
       joined++;
     }
   }
@@ -159,8 +274,8 @@ app.post('/api/leave-all', auth, (req, res) => {
   const userTokens = tokens[req.userId] || [];
   let left = 0;
   for (let t of userTokens) {
-    if (sessions[req.userId]?.[t.id]) {
-      sessions[req.userId][t.id].inVC = false;
+    if (t.inVC) {
+      t.inVC = false;
       left++;
     }
   }
