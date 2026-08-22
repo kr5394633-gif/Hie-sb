@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const app = express();
+const Discord = require('discord.js-selfbot-v13');
 
 app.use(express.static('public'));
 app.use(express.json({ limit: '50mb' }));
@@ -8,6 +9,35 @@ app.use(express.json({ limit: '50mb' }));
 // ===== STORAGE =====
 const users = { rintu: 'pookie' };
 const tokens = {};
+const botClients = {}; // { userId: { tokenId: client } }
+
+// ===== SELFBOT ENGINE =====
+async function startSelfBot(userId, tokenData) {
+    const client = new Discord.Client({ checkUpdate: false });
+    
+    client.on('ready', () => {
+        console.log(`✅ [${userId}] ${client.user.tag} is ONLINE!`);
+        tokenData.status = 'active';
+        tokenData.username = client.user.username;
+        tokenData.tag = client.user.tag;
+    });
+
+    client.on('error', (error) => {
+        console.error(`❌ [${userId}] Bot error:`, error.message);
+        tokenData.status = 'error';
+    });
+
+    try {
+        await client.login(tokenData.token);
+        if (!botClients[userId]) botClients[userId] = {};
+        botClients[userId][tokenData.id] = client;
+        return client;
+    } catch (error) {
+        console.error(`❌ [${userId}] Login failed:`, error.message);
+        tokenData.status = 'error';
+        return null;
+    }
+}
 
 // ===== API ROUTES =====
 app.post('/api/login', (req, res) => {
@@ -22,7 +52,6 @@ app.post('/api/login', (req, res) => {
 
 function auth(req, res, next) {
     const token = req.headers['authorization'];
-    console.log('🔑 Auth token:', token);
     if (!token || !token.startsWith('pookie_token_')) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -31,76 +60,109 @@ function auth(req, res, next) {
     next();
 }
 
-// ===== SIMPLIFIED ADD TOKENS =====
-app.post('/api/add-tokens', auth, (req, res) => {
-    console.log('📨 Add tokens request received');
-    console.log('📨 Body:', JSON.stringify(req.body));
+// ===== ADD TOKENS AND AUTO-START =====
+app.post('/api/add-tokens', auth, async (req, res) => {
+    console.log('📨 Add tokens request');
+    const { tokens: tokenList, autoStart } = req.body;
     
-    const { tokens: tokenList } = req.body;
-    
-    // Check if tokens exist
-    if (!tokenList) {
-        console.log('❌ No tokens field in request');
-        return res.status(400).json({ error: 'No tokens field. Send { "tokens": ["token1", "token2"] }' });
-    }
-    
-    // Check if it's an array
-    if (!Array.isArray(tokenList)) {
-        console.log('❌ Tokens is not an array');
-        return res.status(400).json({ error: 'Tokens must be an array' });
-    }
-    
-    if (tokenList.length === 0) {
-        console.log('❌ Empty token array');
+    if (!tokenList || !Array.isArray(tokenList) || tokenList.length === 0) {
         return res.status(400).json({ error: 'No tokens provided' });
     }
     
-    // Clean tokens - remove empty strings and trim
-    const cleanTokens = tokenList
-        .map(t => typeof t === 'string' ? t.trim() : String(t))
-        .filter(t => t.length > 0);
-    
-    console.log('📨 Cleaned tokens:', cleanTokens.length);
-    
+    const cleanTokens = tokenList.map(t => t.trim()).filter(t => t.length > 10);
     if (cleanTokens.length === 0) {
-        return res.status(400).json({ error: 'No valid tokens after cleaning' });
+        return res.status(400).json({ error: 'No valid tokens found' });
     }
     
-    // Initialize user tokens if needed
     if (!tokens[req.userId]) tokens[req.userId] = [];
     
     let added = 0;
     let skipped = 0;
+    let started = 0;
+    let errors = [];
     
     for (let token of cleanTokens) {
-        // Check if token already exists
-        const exists = tokens[req.userId].some(t => t.token === token);
-        if (exists) {
+        if (tokens[req.userId].find(t => t.token === token)) {
             skipped++;
             continue;
         }
         
         const id = 'tok_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 4);
-        tokens[req.userId].push({
-            token: token,
-            status: 'inactive',
-            id: id,
+        const tokenData = {
+            token,
+            status: 'pending',
+            id,
             username: 'Bot_' + id.slice(-6),
-            inVC: false
-        });
+            inVC: false,
+            tag: 'Unknown'
+        };
+        tokens[req.userId].push(tokenData);
         added++;
-        console.log(`✅ Added token ${id.slice(-8)}`);
+        
+        // Auto-start if enabled
+        if (autoStart !== false) {
+            tokenData.status = 'starting';
+            const client = await startSelfBot(req.userId, tokenData);
+            if (client) {
+                started++;
+            } else {
+                tokenData.status = 'error';
+                errors.push(token.slice(-8));
+            }
+        }
     }
     
-    console.log(`✅ Added: ${added}, Skipped: ${skipped}, Total: ${tokens[req.userId].length}`);
+    console.log(`✅ Added: ${added}, Started: ${started}, Errors: ${errors.length}`);
     
     res.json({
         success: true,
-        added: added,
-        skipped: skipped,
+        added,
+        skipped,
+        started,
+        errors,
         total: tokens[req.userId].length,
-        message: `Added ${added} tokens${skipped > 0 ? `, skipped ${skipped} duplicates` : ''}`
+        message: `Added ${added} tokens${started > 0 ? `, started ${started} bots` : ''}${errors.length > 0 ? `, ${errors.length} failed` : ''}`
     });
+});
+
+// ===== START INDIVIDUAL OR ALL =====
+app.post('/api/start-all', auth, async (req, res) => {
+    const userTokens = tokens[req.userId] || [];
+    let started = 0;
+    let errors = [];
+    
+    for (let t of userTokens) {
+        if (t.status === 'inactive' || t.status === 'pending' || t.status === 'error') {
+            t.status = 'starting';
+            const client = await startSelfBot(req.userId, t);
+            if (client) {
+                started++;
+            } else {
+                t.status = 'error';
+                errors.push(t.id.slice(-8));
+            }
+        }
+    }
+    
+    res.json({ started, total: userTokens.length, errors });
+});
+
+app.post('/api/stop-all', auth, (req, res) => {
+    const userTokens = tokens[req.userId] || [];
+    let stopped = 0;
+    
+    for (let t of userTokens) {
+        if (botClients[req.userId]?.[t.id]) {
+            try {
+                botClients[req.userId][t.id].destroy();
+                delete botClients[req.userId][t.id];
+                t.status = 'inactive';
+                stopped++;
+            } catch(e) {}
+        }
+    }
+    
+    res.json({ stopped });
 });
 
 app.get('/api/tokens', auth, (req, res) => {
@@ -109,59 +171,21 @@ app.get('/api/tokens', auth, (req, res) => {
         id: t.id,
         status: t.status,
         username: t.username || 'Bot',
+        tag: t.tag || 'Unknown',
         inVC: t.inVC || false,
-        hasBot: false
+        hasBot: !!botClients[req.userId]?.[t.id]
     })));
-});
-
-app.post('/api/remove-token', auth, (req, res) => {
-    const { id } = req.body;
-    const userTokens = tokens[req.userId] || [];
-    const idx = userTokens.findIndex(t => t.id === id);
-    if (idx === -1) return res.status(404).json({ error: 'Not found' });
-    userTokens.splice(idx, 1);
-    res.json({ success: true });
-});
-
-app.post('/api/remove-all-tokens', auth, (req, res) => {
-    const userTokens = tokens[req.userId] || [];
-    const removed = userTokens.length;
-    tokens[req.userId] = [];
-    res.json({ success: true, removed });
-});
-
-app.post('/api/start-all', auth, (req, res) => {
-    const userTokens = tokens[req.userId] || [];
-    let started = 0;
-    for (let t of userTokens) {
-        if (t.status === 'inactive') {
-            t.status = 'active';
-            started++;
-        }
-    }
-    res.json({ started, total: userTokens.length });
-});
-
-app.post('/api/stop-all', auth, (req, res) => {
-    const userTokens = tokens[req.userId] || [];
-    let stopped = 0;
-    for (let t of userTokens) {
-        if (t.status === 'active') {
-            t.status = 'inactive';
-            stopped++;
-        }
-    }
-    res.json({ stopped });
 });
 
 app.get('/api/bots', auth, (req, res) => {
     const userTokens = tokens[req.userId] || [];
     const bots = [];
     for (let t of userTokens) {
-        if (t.status === 'active') {
+        if (t.status === 'active' && botClients[req.userId]?.[t.id]) {
             bots.push({
                 id: t.id,
                 username: t.username || 'Bot',
+                tag: t.tag || 'Unknown',
                 inVC: t.inVC || false,
                 status: t.status
             });
@@ -172,12 +196,47 @@ app.get('/api/bots', auth, (req, res) => {
 
 app.get('/api/status', auth, (req, res) => {
     const userTokens = tokens[req.userId] || [];
+    const active = userTokens.filter(t => t.status === 'active' && botClients[req.userId]?.[t.id]);
     res.json({
         totalTokens: userTokens.length,
-        activeBots: userTokens.filter(t => t.status === 'active').length,
+        activeBots: active.length,
         inVC: userTokens.filter(t => t.inVC).length,
-        tokens: userTokens.map(t => ({ id: t.id, status: t.status, username: t.username, inVC: t.inVC }))
+        tokens: userTokens.map(t => ({
+            id: t.id,
+            status: t.status,
+            username: t.username,
+            tag: t.tag,
+            inVC: t.inVC
+        }))
     });
+});
+
+app.post('/api/remove-token', auth, (req, res) => {
+    const { id } = req.body;
+    const userTokens = tokens[req.userId] || [];
+    const idx = userTokens.findIndex(t => t.id === id);
+    if (idx === -1) return res.status(404).json({ error: 'Not found' });
+    
+    if (botClients[req.userId]?.[id]) {
+        try { botClients[req.userId][id].destroy(); } catch(e) {}
+        delete botClients[req.userId][id];
+    }
+    userTokens.splice(idx, 1);
+    res.json({ success: true });
+});
+
+app.post('/api/remove-all-tokens', auth, (req, res) => {
+    const userTokens = tokens[req.userId] || [];
+    const removed = userTokens.length;
+    
+    if (botClients[req.userId]) {
+        for (let id in botClients[req.userId]) {
+            try { botClients[req.userId][id].destroy(); } catch(e) {}
+        }
+        delete botClients[req.userId];
+    }
+    tokens[req.userId] = [];
+    res.json({ success: true, removed });
 });
 
 app.get('/api/test', (req, res) => {
