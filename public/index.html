@@ -16,7 +16,7 @@
       padding: 20px;
     }
     .container {
-      max-width: 1000px;
+      max-width: 1100px;
       width: 100%;
       background: rgba(255, 20, 147, 0.06);
       border: 2px solid rgba(255, 105, 180, 0.25);
@@ -58,6 +58,22 @@
       justify-content: center;
       margin: 15px 0;
     }
+    .input-area textarea {
+      padding: 14px 20px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 105, 180, 0.25);
+      background: rgba(255, 255, 255, 0.03);
+      color: #ffe4ec;
+      font-size: 0.9em;
+      flex: 2;
+      min-width: 250px;
+      min-height: 80px;
+      outline: none;
+      resize: vertical;
+      font-family: inherit;
+    }
+    .input-area textarea:focus { border-color: #ff69b4; }
+    .input-area textarea::placeholder { color: #ffb6c155; }
     .input-area input {
       padding: 14px 20px;
       border-radius: 14px;
@@ -65,8 +81,8 @@
       background: rgba(255, 255, 255, 0.03);
       color: #ffe4ec;
       font-size: 1em;
-      flex: 2;
-      min-width: 180px;
+      flex: 1;
+      min-width: 150px;
       outline: none;
     }
     .input-area input:focus { border-color: #ff69b4; }
@@ -88,6 +104,8 @@
     .input-area button.red { background: linear-gradient(135deg, #ff4444, #cc0000); }
     .input-area button.red:hover { box-shadow: 0 0 30px rgba(255,68,68,0.3); }
     .input-area button.orange { background: linear-gradient(135deg, #ff8800, #cc6600); }
+    .input-area button.purple { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+    .input-area button.purple:hover { box-shadow: 0 0 30px rgba(155,89,182,0.3); }
     #tokenList {
       margin-top: 15px;
       color: #ffb6c1;
@@ -106,6 +124,7 @@
     }
     .token-item .online { color: #00ffcc; }
     .token-item .offline { color: #ff69b488; }
+    .token-item .invc { color: #ff8800; }
     .token-item .remove {
       background: none;
       border: none;
@@ -151,7 +170,7 @@
     .tab-content.active { display: block; }
     .bot-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 12px;
       margin-top: 10px;
     }
@@ -162,18 +181,18 @@
       text-align: center;
       border: 1px solid rgba(255,105,180,0.08);
     }
-    .bot-card .name { color: #ff69b4; font-weight: bold; }
-    .bot-card .status { font-size: 0.8em; color: #ffb6c188; margin: 5px 0; }
+    .bot-card .name { color: #ff69b4; font-weight: bold; font-size: 0.9em; }
+    .bot-card .status { font-size: 0.75em; color: #ffb6c188; margin: 5px 0; }
     .bot-card .controls {
       display: flex;
-      gap: 5px;
+      gap: 4px;
       justify-content: center;
       flex-wrap: wrap;
       margin-top: 8px;
     }
     .bot-card .controls button {
-      padding: 5px 12px;
-      font-size: 0.7em;
+      padding: 4px 10px;
+      font-size: 0.65em;
       border: 1px solid rgba(255,105,180,0.2);
       background: rgba(255,20,147,0.05);
       color: #ffb6c1;
@@ -220,6 +239,24 @@
       color: #ffb6c1;
       margin-left: 8px;
     }
+    .section-title {
+      color: #ff69b4;
+      font-size: 0.9em;
+      margin: 10px 0 5px 0;
+      text-align: left;
+    }
+    .flex-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    @media (max-width: 600px) {
+      .container { padding: 20px; }
+      h1 { font-size: 2em; }
+      .input-area textarea { min-width: 100%; }
+      .input-area input { min-width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -238,24 +275,31 @@
     <button class="tab-btn" onclick="switchTab('bots')">🎮 Bots <span class="count-badge" id="botCount">0</span></button>
     <button class="tab-btn" onclick="switchTab('invite')">🔗 Invite</button>
     <button class="tab-btn" onclick="switchTab('rename')">✏️ Rename</button>
+    <button class="tab-btn" onclick="switchTab('channel')">🔊 Channel</button>
   </div>
 
+  <!-- TAB: TOKENS -->
   <div id="tab-tokens" class="tab-content active">
     <div class="input-area">
-      <input id="tokenInput" placeholder="Paste Discord token...">
-      <button onclick="addToken()">➕ Add</button>
+      <textarea id="tokenInput" placeholder="Paste multiple tokens here...&#10;One per line or comma separated"></textarea>
+    </div>
+    <div class="input-area">
+      <button onclick="addTokens()" class="purple">📥 Add All Tokens</button>
       <button onclick="startAll()" class="green">🚀 Start All</button>
       <button onclick="stopAll()" class="red">⏹️ Stop All</button>
+      <button onclick="removeAllTokens()" class="red">🗑️ Remove All</button>
     </div>
     <div id="tokenList"><div style="color:#ffb6c155; text-align:center; padding:15px;">💖 No tokens yet</div></div>
   </div>
 
+  <!-- TAB: BOTS -->
   <div id="tab-bots" class="tab-content">
     <div class="bot-grid" id="botGrid">
       <div style="color:#ffb6c155; text-align:center; padding:20px; grid-column:1/-1;">💤 No active bots</div>
     </div>
   </div>
 
+  <!-- TAB: INVITE -->
   <div id="tab-invite" class="tab-content">
     <div style="text-align:center;">
       <div class="invite-area">
@@ -263,10 +307,11 @@
         <button onclick="inviteJoin()">🚀 Join All Bots</button>
         <button onclick="leaveAll()" class="red">🚪 Leave All</button>
       </div>
-      <div style="color:#ffb6c155; font-size:0.85em;">💖 All active bots will join and BLAST volume 1000%+</div>
+      <div style="color:#ffb6c155; font-size:0.85em;">💖 All active bots will join the server from invite</div>
     </div>
   </div>
 
+  <!-- TAB: RENAME -->
   <div id="tab-rename" class="tab-content">
     <div style="text-align:center;">
       <input id="newNameInput" placeholder="New name for all bots..." style="padding:14px 20px; border-radius:14px; border:1px solid rgba(255,105,180,0.25); background:rgba(255,255,255,0.03); color:#ffe4ec; font-size:1em; width:80%; max-width:400px; outline:none;">
@@ -276,7 +321,25 @@
     </div>
   </div>
 
-  <div class="footer">🌸 <strong>RINTU'S ARMY</strong> · v8.0 · 💕</div>
+  <!-- TAB: CHANNEL -->
+  <div id="tab-channel" class="tab-content">
+    <div style="text-align:center;">
+      <div style="color:#ffb6c1; margin-bottom:15px;">🔊 Join a specific voice channel with ALL bots</div>
+      <div class="input-area" style="flex-direction:column; align-items:center;">
+        <input id="guildIdInput" placeholder="Guild/Server ID" style="width:80%; max-width:400px;">
+        <input id="channelIdInput" placeholder="Voice Channel ID" style="width:80%; max-width:400px;">
+      </div>
+      <div class="input-area">
+        <button onclick="joinChannel()" class="green">🔊 Join Channel</button>
+        <button onclick="leaveChannel()" class="red">🔇 Leave Channel</button>
+      </div>
+      <div style="color:#ffb6c155; font-size:0.85em; margin-top:10px;">
+        💡 Get IDs by enabling Developer Mode in Discord & right-clicking
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">🌸 <strong>RINTU'S ARMY</strong> · v9.0 · MULTI-TOKEN ARMY 💕</div>
 </div>
 
 <script>
@@ -357,20 +420,30 @@
     });
   }
 
-  // ===== ADD TOKEN =====
-  function addToken() {
-    var input = document.getElementById('tokenInput');
-    var token = input.value.trim();
-    if (!token) {
-      alert('🌸 Paste a Discord token!');
+  // ===== ADD TOKENS (BULK) =====
+  function addTokens() {
+    var textarea = document.getElementById('tokenInput');
+    var raw = textarea.value.trim();
+    if (!raw) {
+      alert('🌸 Paste at least one token!');
       return;
     }
-    document.getElementById('statusMsg').textContent = '⏳ Adding token...';
-    apiCall('/api/add-token', 'POST', { token: token })
+    
+    // Split by newline or comma
+    var tokenList = raw.split(/[\n,]+/).map(function(t) { return t.trim(); }).filter(function(t) { return t.length > 0; });
+    
+    if (tokenList.length === 0) {
+      alert('🌸 No valid tokens found!');
+      return;
+    }
+    
+    document.getElementById('statusMsg').textContent = '⏳ Adding ' + tokenList.length + ' tokens...';
+    
+    apiCall('/api/add-tokens-bulk', 'POST', { tokens: tokenList })
       .then(function(data) {
         if (data.success) {
-          input.value = '';
-          document.getElementById('statusMsg').textContent = '✅ Token added!';
+          textarea.value = '';
+          document.getElementById('statusMsg').textContent = '✅ Added ' + data.added + ' tokens! (Skipped ' + (data.skipped || 0) + ' duplicates)';
           loadTokens();
         } else {
           alert('❌ ' + (data.error || 'Failed'));
@@ -402,8 +475,9 @@
           var t = allTokens[i];
           var statusClass = t.hasBot ? 'online' : 'offline';
           var statusText = t.hasBot ? '🩷 ONLINE' : '💤 OFFLINE';
+          if (t.inVC) { statusText += ' 🔊'; }
           html += '<div class="token-item">';
-          html += '<span>🔑 ' + t.id.slice(-8) + '</span>';
+          html += '<span>🔑 ' + t.id.slice(-8) + ' <span style="font-size:0.7em;color:#ffb6c155;">' + (t.username || '') + '</span></span>';
           html += '<span class="' + statusClass + '">' + statusText + '</span>';
           html += '<button class="remove" onclick="removeToken(\'' + t.id + '\')">✕</button>';
           html += '</div>';
@@ -427,12 +501,25 @@
       });
   }
 
+  // ===== REMOVE ALL TOKENS =====
+  function removeAllTokens() {
+    if (!confirm('⚠️ Remove ALL tokens? This cannot be undone!')) return;
+    apiCall('/api/remove-all-tokens', 'POST')
+      .then(function(data) {
+        if (data.success) {
+          loadTokens();
+          loadBots();
+          document.getElementById('statusMsg').textContent = '🗑️ Removed ' + (data.removed || 0) + ' tokens';
+        }
+      });
+  }
+
   // ===== START ALL =====
   function startAll() {
     document.getElementById('statusMsg').textContent = '🚀 Starting all bots...';
     apiCall('/api/start-all', 'POST')
       .then(function(data) {
-        document.getElementById('statusMsg').textContent = '🚀 Started ' + (data.started || 0) + ' bot(s)!';
+        document.getElementById('statusMsg').textContent = '🚀 Started ' + (data.started || 0) + '/' + (data.total || 0) + ' bot(s)!';
         loadTokens();
         loadBots();
       });
@@ -505,6 +592,7 @@
       .then(function(data) {
         document.getElementById('statusMsg').textContent = '✏️ Renamed ' + (data.renamed || 0) + ' bot(s)!';
         loadBots();
+        loadTokens();
       });
   }
 
@@ -515,6 +603,7 @@
       .then(function(data) {
         document.getElementById('statusMsg').textContent = '↩️ Reset ' + (data.reset || 0) + ' bot(s)';
         loadBots();
+        loadTokens();
       });
   }
 
@@ -544,10 +633,44 @@
       });
   }
 
+  // ===== JOIN CHANNEL =====
+  function joinChannel() {
+    var guildId = document.getElementById('guildIdInput').value.trim();
+    var channelId = document.getElementById('channelIdInput').value.trim();
+    
+    if (!guildId || !channelId) {
+      alert('🌸 Enter both Guild ID and Channel ID!');
+      return;
+    }
+    
+    document.getElementById('statusMsg').textContent = '🔊 Joining channel...';
+    apiCall('/api/join-channel', 'POST', { guildId: guildId, channelId: channelId })
+      .then(function(data) {
+        if (data.success) {
+          document.getElementById('statusMsg').textContent = '🔊 ' + (data.joined || 0) + ' bot(s) joined channel!';
+          loadBots();
+          loadTokens();
+        } else {
+          alert('❌ ' + (data.error || 'Failed'));
+        }
+      });
+  }
+
+  // ===== LEAVE CHANNEL =====
+  function leaveChannel() {
+    document.getElementById('statusMsg').textContent = '🔇 Leaving channel...';
+    apiCall('/api/leave-channel', 'POST')
+      .then(function(data) {
+        document.getElementById('statusMsg').textContent = '🔇 ' + (data.left || 0) + ' bot(s) left channel';
+        loadBots();
+        loadTokens();
+      });
+  }
+
   // ===== START =====
   window.onload = function() {
     autoLogin();
   };
 </script>
 </body>
-    </html>
+</html>
