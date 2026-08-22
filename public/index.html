@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌸 ULTIMATE POOKIE ARMY 🌸</title>
+    <title>🌸 POOKIE ARMY 🌸</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -16,7 +16,7 @@
             padding: 20px;
         }
         .container {
-            max-width: 1300px;
+            max-width: 900px;
             width: 100%;
             background: rgba(255, 20, 147, 0.06);
             border: 2px solid rgba(255, 105, 180, 0.25);
@@ -24,8 +24,20 @@
             padding: 30px;
             backdrop-filter: blur(10px);
         }
-        h1 { text-align: center; font-size: 2.5em; background: linear-gradient(135deg, #ff69b4, #ff1493); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .subtitle { text-align: center; color: #ffb6c1; font-size: 0.9em; letter-spacing: 4px; margin-bottom: 20px; }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #ff69b4, #ff1493);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            text-align: center;
+            color: #ffb6c1;
+            font-size: 0.9em;
+            letter-spacing: 4px;
+            margin-bottom: 20px;
+        }
         .subtitle span { color: #ff69b4; font-weight: bold; }
         .status-card {
             background: rgba(255, 105, 180, 0.05);
@@ -37,61 +49,39 @@
         }
         .status-card .msg { color: #ffb6c1; font-size: 1em; }
         .status-card .detail { color: #ff69b488; font-size: 0.8em; }
-        
-        .tab-bar {
+        .stats-row {
             display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
+            gap: 15px;
             justify-content: center;
-            margin: 10px 0 15px 0;
+            flex-wrap: wrap;
+            margin: 10px 0;
         }
-        .tab-btn {
+        .stat-box {
+            background: rgba(255,105,180,0.04);
             padding: 8px 20px;
-            border: 1px solid rgba(255,105,180,0.2);
-            background: rgba(255,20,147,0.05);
-            color: #ffb6c188;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.3s;
-            font-size: 0.85em;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255,105,180,0.06);
         }
-        .tab-btn:hover { background: rgba(255,105,180,0.1); }
-        .tab-btn.active {
-            background: linear-gradient(135deg, #ff69b4, #ff1493);
-            color: white;
-            border-color: #ff69b4;
-        }
-        .tab-content { display: none; animation: fadeIn 0.3s; }
-        .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        
-        .section-box {
-            background: rgba(255, 105, 180, 0.04);
-            border-radius: 14px;
-            padding: 15px;
-            margin: 8px 0;
-            border: 1px solid rgba(255, 105, 180, 0.06);
-        }
-        .section-title { color: #ff69b4; font-size: 0.85em; margin-bottom: 8px; font-weight: bold; }
-        
+        .stat-box .num { color: #ff69b4; font-size: 1.5em; font-weight: bold; }
+        .stat-box .label { color: #ffb6c188; font-size: 0.7em; text-transform: uppercase; }
         .input-area {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             justify-content: center;
-            margin: 8px 0;
+            margin: 10px 0;
         }
         .input-area textarea {
-            padding: 10px 15px;
+            padding: 12px 16px;
             border-radius: 12px;
             border: 1px solid rgba(255, 105, 180, 0.25);
             background: rgba(255, 255, 255, 0.03);
             color: #ffe4ec;
-            font-size: 0.85em;
+            font-size: 0.9em;
             flex: 2;
             min-width: 200px;
-            min-height: 60px;
+            min-height: 80px;
             outline: none;
             resize: vertical;
             font-family: inherit;
@@ -99,7 +89,7 @@
         .input-area textarea:focus { border-color: #ff69b4; }
         .input-area textarea::placeholder { color: #ffb6c155; }
         .input-area input {
-            padding: 10px 15px;
+            padding: 10px 16px;
             border-radius: 12px;
             border: 1px solid rgba(255, 105, 180, 0.25);
             background: rgba(255, 255, 255, 0.03);
@@ -112,28 +102,22 @@
         .input-area input:focus { border-color: #ff69b4; }
         .input-area input::placeholder { color: #ffb6c155; }
         .input-area button {
-            padding: 10px 18px;
+            padding: 10px 20px;
             border: none;
             border-radius: 12px;
             background: linear-gradient(135deg, #ff69b4, #ff1493);
             color: white;
             font-weight: bold;
             cursor: pointer;
-            font-size: 0.85em;
+            font-size: 0.9em;
             transition: 0.3s;
         }
         .input-area button:hover { transform: scale(1.03); box-shadow: 0 0 20px rgba(255,20,147,0.3); }
         .input-area button.green { background: linear-gradient(135deg, #00cc88, #009966); }
         .input-area button.red { background: linear-gradient(135deg, #ff4444, #cc0000); }
-        .input-area button.orange { background: linear-gradient(135deg, #ff8800, #cc6600); }
         .input-area button.purple { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
-        .input-area button.blast { background: linear-gradient(135deg, #ff0000, #cc0000); animation: pulse 1s infinite; }
-        .input-area button.cyan { background: linear-gradient(135deg, #00ccff, #0099cc); }
-        .input-area button.yellow { background: linear-gradient(135deg, #ffcc00, #cc9900); }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-        
         .token-list {
-            margin-top: 8px;
+            margin-top: 10px;
             color: #ffb6c1;
             max-height: 200px;
             overflow-y: auto;
@@ -151,8 +135,6 @@
         }
         .token-item .online { color: #00ffcc; }
         .token-item .offline { color: #ff69b488; }
-        .token-item .error { color: #ff4444; }
-        .token-item .invc { color: #ff8800; }
         .token-item .remove {
             background: none;
             border: none;
@@ -161,54 +143,6 @@
             font-size: 1em;
         }
         .token-item .remove:hover { color: #ff4444; }
-        
-        .log-container {
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 12px;
-            padding: 10px;
-            max-height: 250px;
-            overflow-y: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 0.75em;
-            color: #ffb6c1;
-            border: 1px solid rgba(255,105,180,0.1);
-        }
-        .log-entry { padding: 2px 0; border-bottom: 1px solid rgba(255,105,180,0.03); }
-        .log-entry .time { color: #ff69b488; margin-right: 8px; }
-        .log-entry .info { color: #00ffcc; }
-        .log-entry .success { color: #00ff88; }
-        .log-entry .error { color: #ff4444; }
-        .log-entry .audio { color: #ff8800; }
-        .log-entry .voice { color: #00ccff; }
-        .log-entry .system { color: #ff69b4; }
-        
-        .setting-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 8px;
-        }
-        .setting-card {
-            background: rgba(255,105,180,0.04);
-            border-radius: 10px;
-            padding: 10px;
-            text-align: center;
-            border: 1px solid rgba(255,105,180,0.06);
-        }
-        .setting-card .label { color: #ffb6c188; font-size: 0.65em; text-transform: uppercase; }
-        .setting-card .value { color: #ff69b4; font-size: 1em; font-weight: bold; margin: 3px 0; }
-        .setting-card .toggle-btn {
-            padding: 4px 12px;
-            border: 1px solid rgba(255,105,180,0.2);
-            border-radius: 15px;
-            background: rgba(255,20,147,0.05);
-            color: #ffb6c1;
-            cursor: pointer;
-            font-size: 0.7em;
-            transition: 0.3s;
-        }
-        .setting-card .toggle-btn:hover { background: rgba(255,105,180,0.15); }
-        .setting-card .toggle-btn.active { background: #ff69b4; color: white; border-color: #ff69b4; }
-        
         .footer {
             text-align: center;
             margin-top: 20px;
@@ -218,146 +152,57 @@
             padding-top: 15px;
         }
         .footer strong { color: #ff69b466; }
-        .count-badge {
-            background: rgba(255,105,180,0.15);
-            padding: 2px 10px;
-            border-radius: 15px;
-            font-size: 0.65em;
-            color: #ffb6c1;
-            margin-left: 6px;
-        }
-        .stats-row {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin: 8px 0;
-        }
-        .stat-box {
-            background: rgba(255,105,180,0.04);
-            padding: 6px 15px;
+        .debug-box {
+            background: rgba(255, 0, 0, 0.05);
+            border: 1px solid rgba(255, 68, 68, 0.2);
             border-radius: 10px;
-            text-align: center;
-            border: 1px solid rgba(255,105,180,0.06);
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 0.8em;
+            color: #ff6b6b;
+            display: none;
         }
-        .stat-box .num { color: #ff69b4; font-size: 1.2em; font-weight: bold; }
-        .stat-box .label { color: #ffb6c188; font-size: 0.65em; text-transform: uppercase; }
-        @media (max-width: 600px) {
-            .container { padding: 15px; }
-            h1 { font-size: 1.8em; }
-            .setting-grid { grid-template-columns: 1fr 1fr; }
-        }
+        .debug-box.show { display: block; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>🌸 ULTIMATE POOKIE ARMY 🌸</h1>
+    <h1>🌸 POOKIE ARMY 🌸</h1>
     <div class="subtitle">💖 <span>RINTU'S PRIVATE</span> · NO RULES · ALL CUTE 💖</div>
     
     <div class="status-card">
-        <div class="msg" id="statusMsg">⏳ Connecting to server...</div>
+        <div class="msg" id="statusMsg">⏳ Connecting...</div>
         <div class="detail" id="detailMsg">Loading dashboard</div>
     </div>
 
     <div class="stats-row">
         <div class="stat-box"><div class="num" id="statTokens">0</div><div class="label">Tokens</div></div>
-        <div class="stat-box"><div class="num" id="statBots">0</div><div class="label">Active Bots</div></div>
+        <div class="stat-box"><div class="num" id="statBots">0</div><div class="label">Active</div></div>
         <div class="stat-box"><div class="num" id="statVC">0</div><div class="label">In VC</div></div>
     </div>
 
-    <div class="tab-bar">
-        <button class="tab-btn active" onclick="switchTab('tokens')">🪙 Tokens</button>
-        <button class="tab-btn" onclick="switchTab('bots')">🎮 Bots</button>
-        <button class="tab-btn" onclick="switchTab('audio')">🎵 Audio</button>
-        <button class="tab-btn" onclick="switchTab('settings')">⚙️ Settings</button>
-        <button class="tab-btn" onclick="switchTab('logs')">📋 Logs</button>
-    </div>
+    <div class="debug-box" id="debugBox"></div>
 
-    <!-- TOKENS TAB -->
-    <div id="tab-tokens" class="tab-content active">
-        <div class="section-box">
-            <div class="section-title">📥 Add Tokens</div>
-            <div class="input-area">
-                <textarea id="tokenInput" placeholder="Paste Discord tokens here...&#10;One per line"></textarea>
-            </div>
-            <div class="input-area">
-                <button onclick="addTokens()" class="purple">📥 Add & Auto-Start</button>
-                <button onclick="startAll()" class="green">🚀 Start All</button>
-                <button onclick="stopAll()" class="red">⏹️ Stop All</button>
-                <button onclick="removeAllTokens()" class="red">🗑️ Remove All</button>
-            </div>
+    <div style="margin: 15px 0;">
+        <div class="input-area">
+            <textarea id="tokenInput" placeholder="Paste Discord tokens here...&#10;One per line"></textarea>
         </div>
-        <div class="token-list" id="tokenList"><div style="color:#ffb6c155; text-align:center; padding:10px;">💖 No tokens yet</div></div>
-    </div>
-
-    <!-- BOTS TAB -->
-    <div id="tab-bots" class="tab-content">
-        <div class="section-box">
-            <div class="section-title">🎮 Active Bots</div>
-            <div id="botGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(180px,1fr)); gap:8px; margin-top:8px;">
-                <div style="color:#ffb6c155; text-align:center; padding:15px; grid-column:1/-1;">💤 No active bots</div>
-            </div>
+        <div class="input-area">
+            <button onclick="addTokens()" class="purple">📥 Add Tokens</button>
+            <button onclick="startAll()" class="green">🚀 Start All</button>
+            <button onclick="stopAll()" class="red">⏹️ Stop All</button>
+            <button onclick="removeAllTokens()" class="red">🗑️ Remove All</button>
         </div>
     </div>
 
-    <!-- AUDIO TAB -->
-    <div id="tab-audio" class="tab-content">
-        <div class="section-box">
-            <div class="section-title">🎵 Music Control</div>
-            <div class="input-area">
-                <input id="musicUrl" placeholder="YouTube URL or search..." style="flex:2; min-width:150px;">
-                <button onclick="playMusic()" class="green">▶️ Play</button>
-                <button onclick="stopMusic()" class="red">⏹️ Stop</button>
-                <button onclick="pauseMusic()" class="orange">⏸️ Pause</button>
-                <button onclick="resumeMusic()" class="cyan">▶️ Resume</button>
-            </div>
-        </div>
-        <div class="section-box">
-            <div class="section-title">🔊 Voice Channel</div>
-            <div class="input-area">
-                <input id="guildId" placeholder="Guild/Server ID">
-                <input id="channelId" placeholder="Voice Channel ID">
-                <button onclick="joinChannel()" class="green">🔊 Join</button>
-                <button onclick="leaveChannel()" class="red">🔇 Leave</button>
-            </div>
-            <div style="color:#ffb6c155; font-size:0.7em; text-align:center;">💡 Enable Developer Mode → Right-click server/channel → Copy ID</div>
-        </div>
-    </div>
+    <div class="token-list" id="tokenList"><div style="color:#ffb6c155; text-align:center; padding:10px;">💖 No tokens yet</div></div>
 
-    <!-- SETTINGS TAB -->
-    <div id="tab-settings" class="tab-content">
-        <div class="section-box">
-            <div class="section-title">⚙️ Audio Settings</div>
-            <div class="setting-grid" id="settingsGrid">
-                <div class="setting-card"><div class="label">Loop</div><div class="value" id="s-loop">OFF</div><button class="toggle-btn" onclick="toggleSetting('loop')">Toggle</button></div>
-                <div class="setting-card"><div class="label">Bassboost</div><div class="value" id="s-bassboost">OFF</div><button class="toggle-btn" onclick="toggleSetting('bassboost')">Toggle</button></div>
-                <div class="setting-card"><div class="label">Blast Mode</div><div class="value" id="s-blastMode">OFF</div><button class="toggle-btn" onclick="toggleSetting('blastMode')">💥 Toggle</button></div>
-                <div class="setting-card"><div class="label">Pungi Mode</div><div class="value" id="s-pungiMode">OFF</div><button class="toggle-btn" onclick="toggleSetting('pungiMode')">🐍 Toggle</button></div>
-                <div class="setting-card"><div class="label">Super Loud</div><div class="value" id="s-superLoudMode">OFF</div><button class="toggle-btn" onclick="toggleSetting('superLoudMode')">🔊 Toggle</button></div>
-                <div class="setting-card"><div class="label">Force Loud</div><div class="value" id="s-forceLoudMode">OFF</div><button class="toggle-btn" onclick="toggleSetting('forceLoudMode')">🔥 Toggle</button></div>
-                <div class="setting-card"><div class="label">Blast Volume</div><div class="value" id="s-blastVolume">50</div><button class="toggle-btn" onclick="setValue('blastVolume', prompt('Enter blast volume (1-500):') || 50)">Set</button></div>
-                <div class="setting-card"><div class="label">Pungi Intensity</div><div class="value" id="s-pungiIntensity">50</div><button class="toggle-btn" onclick="setValue('pungiIntensity', prompt('Enter pungi intensity (1-200):') || 50)">Set</button></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- LOGS TAB -->
-    <div id="tab-logs" class="tab-content">
-        <div class="section-box">
-            <div class="section-title">📋 Live Engine Logs</div>
-            <div class="log-container" id="logContainer">
-                <div style="color:#ffb6c155; text-align:center; padding:15px;">⏳ Connecting to log stream...</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="footer">🌸 <strong>RINTU'S ULTIMATE ARMY</strong> · v3.0 · SELFBOT + AUDIO ENGINE 💕</div>
+    <div class="footer">🌸 <strong>RINTU'S ARMY</strong> · v2.0 · 💕</div>
 </div>
 
 <script>
 let authToken = '';
 let allTokens = [];
-let allBots = [];
 
 // ===== LOGIN =====
 function autoLogin() {
@@ -372,37 +217,29 @@ function autoLogin() {
         if (data.token) {
             authToken = data.token;
             document.getElementById('statusMsg').textContent = '✅ Connected!';
-            document.getElementById('detailMsg').textContent = 'Ultimate Army Ready! 🚀';
+            document.getElementById('detailMsg').textContent = 'Ready! 🚀';
             loadTokens();
-            loadBots();
             loadStatus();
-            loadSettings();
-            connectLogs();
             setInterval(loadTokens, 5000);
-            setInterval(loadBots, 5000);
             setInterval(loadStatus, 5000);
         } else {
             document.getElementById('statusMsg').textContent = '❌ Login failed';
+            document.getElementById('detailMsg').textContent = 'Use rintu/pookie';
         }
     })
-    .catch(() => setTimeout(autoLogin, 3000));
-}
-
-// ===== TAB SWITCHING =====
-function switchTab(tabName) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => {
-        if (b.getAttribute('onclick') === "switchTab('" + tabName + "')") {
-            b.classList.add('active');
-        }
+    .catch(err => {
+        document.getElementById('statusMsg').textContent = '⚠️ Error';
+        console.error('Login error:', err);
     });
-    document.getElementById('tab-' + tabName).classList.add('active');
-    if (tabName === 'bots') loadBots();
-    if (tabName === 'tokens') loadTokens();
 }
 
-// ===== API CALL =====
+function showDebug(msg) {
+    const box = document.getElementById('debugBox');
+    box.textContent = msg;
+    box.classList.add('show');
+    setTimeout(() => box.classList.remove('show'), 8000);
+}
+
 function apiCall(endpoint, method, body) {
     return new Promise((resolve, reject) => {
         const opts = {
@@ -410,54 +247,79 @@ function apiCall(endpoint, method, body) {
             headers: { 'Authorization': authToken, 'Content-Type': 'application/json' }
         };
         if (body) opts.body = JSON.stringify(body);
-        fetch(endpoint, opts).then(r => r.json()).then(resolve).catch(reject);
+        fetch(endpoint, opts)
+            .then(r => r.json())
+            .then(resolve)
+            .catch(reject);
     });
 }
 
-// ===== TOKENS =====
+// ===== ADD TOKENS =====
 function addTokens() {
     const raw = document.getElementById('tokenInput').value.trim();
-    if (!raw) { alert('🌸 Paste at least one token!'); return; }
-    const tokenList = raw.split(/[\n,]+/).map(t => t.trim()).filter(t => t.length > 10);
-    if (tokenList.length === 0) { alert('🌸 No valid tokens!'); return; }
+    if (!raw) {
+        alert('🌸 Paste at least one token!');
+        return;
+    }
+    
+    // Split by newline or comma
+    const tokenList = raw.split(/[\n,]+/).map(t => t.trim()).filter(t => t.length > 5);
+    
+    if (tokenList.length === 0) {
+        alert('🌸 No valid tokens found! Tokens must be at least 6 characters.');
+        return;
+    }
+    
     document.getElementById('statusMsg').textContent = '⏳ Adding ' + tokenList.length + ' tokens...';
-    apiCall('/api/add-tokens', 'POST', { tokens: tokenList, autoStart: true })
+    showDebug('📤 Sending ' + tokenList.length + ' tokens to server...');
+    
+    apiCall('/api/add-tokens', 'POST', { tokens: tokenList })
         .then(data => {
+            console.log('Response:', data);
             if (data.success) {
                 document.getElementById('tokenInput').value = '';
-                document.getElementById('statusMsg').textContent = '✅ Added ' + data.added + ' tokens, Started ' + (data.started || 0);
+                document.getElementById('statusMsg').textContent = '✅ Added ' + data.added + ' tokens!';
+                document.getElementById('detailMsg').textContent = data.message || 'Success!';
                 loadTokens();
-                loadBots();
                 loadStatus();
             } else {
-                alert('❌ ' + (data.error || 'Failed'));
+                showDebug('❌ Error: ' + JSON.stringify(data));
+                alert('❌ ' + (data.error || 'Unknown error'));
+                document.getElementById('statusMsg').textContent = '❌ Failed';
             }
+        })
+        .catch(err => {
+            showDebug('❌ Network error: ' + err.message);
+            alert('❌ Network error: ' + err.message);
+            document.getElementById('statusMsg').textContent = '❌ Error';
         });
 }
 
+// ===== LOAD TOKENS =====
 function loadTokens() {
     if (!authToken) return;
-    apiCall('/api/tokens').then(data => {
-        allTokens = data || [];
-        document.getElementById('statTokens').textContent = allTokens.length;
-        const container = document.getElementById('tokenList');
-        if (allTokens.length === 0) {
-            container.innerHTML = '<div style="color:#ffb6c155; text-align:center; padding:10px;">💖 No tokens yet</div>';
-            return;
-        }
-        let html = '';
-        for (let t of allTokens) {
-            const statusClass = t.status === 'active' ? 'online' : (t.status === 'error' ? 'error' : 'offline');
-            const statusText = t.status === 'active' ? '🩷 ONLINE' : (t.status === 'error' ? '❌ ERROR' : '💤 OFFLINE');
-            const vcText = t.inVC ? ' 🔊' : '';
-            html += `<div class="token-item">
-                <span>🔑 ${t.id.slice(-8)} <span style="font-size:0.7em;color:#ffb6c155;">${t.username || ''}</span></span>
-                <span class="${statusClass}">${statusText}${vcText}</span>
-                <button class="remove" onclick="removeToken('${t.id}')">✕</button>
-            </div>`;
-        }
-        container.innerHTML = html;
-    });
+    apiCall('/api/tokens')
+        .then(data => {
+            allTokens = data || [];
+            document.getElementById('statTokens').textContent = allTokens.length;
+            const container = document.getElementById('tokenList');
+            if (allTokens.length === 0) {
+                container.innerHTML = '<div style="color:#ffb6c155; text-align:center; padding:10px;">💖 No tokens yet</div>';
+                return;
+            }
+            let html = '';
+            for (let t of allTokens) {
+                const statusClass = t.status === 'active' ? 'online' : 'offline';
+                const statusText = t.status === 'active' ? '🩷 ONLINE' : '💤 OFFLINE';
+                html += `<div class="token-item">
+                    <span>🔑 ${t.id.slice(-8)} <span style="font-size:0.7em;color:#ffb6c155;">${t.username || ''}</span></span>
+                    <span class="${statusClass}">${statusText}</span>
+                    <button class="remove" onclick="removeToken('${t.id}')">✕</button>
+                </div>`;
+            }
+            container.innerHTML = html;
+        })
+        .catch(err => console.error('Load tokens error:', err));
 }
 
 function removeToken(id) {
@@ -467,14 +329,15 @@ function removeToken(id) {
 
 function removeAllTokens() {
     if (!confirm('⚠️ Remove ALL tokens?')) return;
-    apiCall('/api/remove-all-tokens', 'POST').then(() => { loadTokens(); loadBots(); loadStatus(); });
+    apiCall('/api/remove-all-tokens', 'POST').then(() => { loadTokens(); loadStatus(); });
 }
 
 function startAll() {
     document.getElementById('statusMsg').textContent = '🚀 Starting all bots...';
     apiCall('/api/start-all', 'POST').then(data => {
         document.getElementById('statusMsg').textContent = '🚀 Started ' + (data.started || 0) + ' bot(s)!';
-        loadTokens(); loadBots(); loadStatus();
+        loadTokens();
+        loadStatus();
     });
 }
 
@@ -482,34 +345,11 @@ function stopAll() {
     document.getElementById('statusMsg').textContent = '⏹️ Stopping all bots...';
     apiCall('/api/stop-all', 'POST').then(data => {
         document.getElementById('statusMsg').textContent = '⏹️ Stopped ' + (data.stopped || 0) + ' bot(s)';
-        loadTokens(); loadBots(); loadStatus();
+        loadTokens();
+        loadStatus();
     });
 }
 
-// ===== BOTS =====
-function loadBots() {
-    if (!authToken) return;
-    apiCall('/api/bots').then(data => {
-        allBots = data || [];
-        document.getElementById('statBots').textContent = allBots.length;
-        const container = document.getElementById('botGrid');
-        if (allBots.length === 0) {
-            container.innerHTML = '<div style="color:#ffb6c155; text-align:center; padding:15px; grid-column:1/-1;">💤 No active bots</div>';
-            return;
-        }
-        let html = '';
-        for (let b of allBots) {
-            const vcStatus = b.inVC ? '🔊 In VC' : '💤 Idle';
-            html += `<div style="background:rgba(255,105,180,0.04); border-radius:10px; padding:10px; text-align:center; border:1px solid rgba(255,105,180,0.06);">
-                <div style="color:#ff69b4; font-weight:bold; font-size:0.9em;">${b.username || 'Bot'}</div>
-                <div style="font-size:0.7em; color:#ffb6c188;">${vcStatus}</div>
-            </div>`;
-        }
-        container.innerHTML = html;
-    });
-}
-
-// ===== STATUS =====
 function loadStatus() {
     if (!authToken) return;
     apiCall('/api/status').then(data => {
@@ -519,115 +359,6 @@ function loadStatus() {
     });
 }
 
-// ===== VOICE CHANNEL =====
-function joinChannel() {
-    const guildId = document.getElementById('guildId').value.trim();
-    const channelId = document.getElementById('channelId').value.trim();
-    if (!guildId || !channelId) { alert('🌸 Enter both IDs!'); return; }
-    document.getElementById('statusMsg').textContent = '🔊 Joining channel...';
-    apiCall('/api/join-channel', 'POST', { guildId, channelId }).then(data => {
-        document.getElementById('statusMsg').textContent = '🔊 ' + (data.joined || 0) + ' bots joined!';
-        loadBots(); loadStatus();
-    });
-}
-
-function leaveChannel() {
-    document.getElementById('statusMsg').textContent = '🔇 Leaving channel...';
-    apiCall('/api/leave-channel', 'POST').then(data => {
-        document.getElementById('statusMsg').textContent = '🔇 ' + (data.left || 0) + ' bots left';
-        loadBots(); loadStatus();
-    });
-}
-
-// ===== MUSIC =====
-function playMusic() {
-    const url = document.getElementById('musicUrl').value.trim();
-    if (!url) { alert('🌸 Enter a URL or search!'); return; }
-    document.getElementById('statusMsg').textContent = '🎵 Playing...';
-    apiCall('/api/play', 'POST', { url }).then(data => {
-        if (data.success) {
-            document.getElementById('statusMsg').textContent = '🎵 Playing on ' + (data.played || 0) + ' bots: ' + (data.title || '');
-        } else {
-            alert('❌ ' + (data.error || 'Failed'));
-        }
-    });
-}
-
-function stopMusic() {
-    apiCall('/api/stop-music', 'POST').then(data => {
-        document.getElementById('statusMsg').textContent = '⏹️ Stopped music on ' + (data.stopped || 0) + ' bots';
-    });
-}
-
-function pauseMusic() {
-    apiCall('/api/pause-music', 'POST').then(data => {
-        document.getElementById('statusMsg').textContent = '⏸️ Paused on ' + (data.paused || 0) + ' bots';
-    });
-}
-
-function resumeMusic() {
-    apiCall('/api/resume-music', 'POST').then(data => {
-        document.getElementById('statusMsg').textContent = '▶️ Resumed on ' + (data.resumed || 0) + ' bots';
-    });
-}
-
-// ===== SETTINGS =====
-function loadSettings() {
-    if (!authToken) return;
-    apiCall('/api/settings').then(data => {
-        const settings = data || {};
-        document.getElementById('s-loop').textContent = settings.loop ? 'ON' : 'OFF';
-        document.getElementById('s-bassboost').textContent = settings.bassboost ? 'ON' : 'OFF';
-        document.getElementById('s-blastMode').textContent = settings.blastMode ? '🔥 ON' : 'OFF';
-        document.getElementById('s-pungiMode').textContent = settings.pungiMode ? '🐍 ON' : 'OFF';
-        document.getElementById('s-superLoudMode').textContent = settings.superLoudMode ? '🔊 ON' : 'OFF';
-        document.getElementById('s-forceLoudMode').textContent = settings.forceLoudMode ? '🔥 ON' : 'OFF';
-        document.getElementById('s-blastVolume').textContent = settings.blastVolume || 50;
-        document.getElementById('s-pungiIntensity').textContent = settings.pungiIntensity || 50;
-    });
-}
-
-function toggleSetting(setting) {
-    apiCall('/api/settings', 'POST', { setting, value: null }).then(() => {
-        loadSettings();
-        document.getElementById('statusMsg').textContent = '⚙️ ' + setting + ' toggled';
-    });
-}
-
-function setValue(setting, value) {
-    if (!value || isNaN(value)) return;
-    apiCall('/api/settings', 'POST', { setting, value: parseFloat(value) }).then(() => {
-        loadSettings();
-        document.getElementById('statusMsg').textContent = '⚙️ ' + setting + ' = ' + value;
-    });
-}
-
-// ===== LIVE LOGS =====
-function connectLogs() {
-    const container = document.getElementById('logContainer');
-    const eventSource = new EventSource('/api/logs');
-    
-    eventSource.onmessage = function(event) {
-        try {
-            const data = JSON.parse(event.data);
-            const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            entry.innerHTML = `<span class="time">[${data.timestamp}]</span><span class="${data.type}">${data.message}</span>`;
-            container.appendChild(entry);
-            container.scrollTop = container.scrollHeight;
-            if (container.children.length > 100) {
-                container.removeChild(container.firstChild);
-            }
-        } catch(e) {}
-    };
-    
-    eventSource.onerror = function() {
-        // Reconnect
-        setTimeout(connectLogs, 3000);
-    };
-}
-
-// ===== START =====
 window.onload = function() {
     autoLogin();
 };
