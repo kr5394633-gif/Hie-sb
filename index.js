@@ -2,7 +2,7 @@ const express = require('express');
 const app = express();
 app.use(express.json());
 
-// ===== FULL POOKIE ARMY DASHBOARD =====
+// ===== FULL POOKIE ARMY DASHBOARD - FIXED =====
 const HTML = `<!DOCTYPE html>
 <html>
 <head>
@@ -229,10 +229,10 @@ const HTML = `<!DOCTYPE html>
 
   <!-- Tabs -->
   <div class="tab-bar">
-    <button class="tab-btn active" onclick="switchTab('tokens')">🪙 Tokens</button>
-    <button class="tab-btn" onclick="switchTab('bots')">🎮 Bots</button>
-    <button class="tab-btn" onclick="switchTab('invite')">🔗 Invite</button>
-    <button class="tab-btn" onclick="switchTab('rename')">✏️ Rename</button>
+    <button class="tab-btn active" data-tab="tokens">🪙 Tokens</button>
+    <button class="tab-btn" data-tab="bots">🎮 Bots</button>
+    <button class="tab-btn" data-tab="invite">🔗 Invite</button>
+    <button class="tab-btn" data-tab="rename">✏️ Rename</button>
   </div>
 
   <!-- Tab: Tokens -->
@@ -281,6 +281,22 @@ const HTML = `<!DOCTYPE html>
 <script>
   let auth = '';
   
+  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.tab-btn').forEach(function(b) {
+        b.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-content').forEach(function(c) {
+        c.classList.remove('active');
+      });
+      this.classList.add('active');
+      var tabId = this.getAttribute('data-tab');
+      document.getElementById('tab-' + tabId).classList.add('active');
+      if (tabId === 'bots') loadBots();
+    });
+  });
+  
   async function autoLogin() {
     try {
       const res = await fetch('/api/login', {
@@ -302,17 +318,10 @@ const HTML = `<!DOCTYPE html>
     }
   }
 
-  function switchTab(tab) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    document.querySelector(\`.tab-btn[onclick="switchTab('${tab}')"]\`).classList.add('active');
-    document.getElementById('tab-' + tab).classList.add('active');
-    if (tab === 'bots') loadBots();
-  }
-
-  async function apiCall(endpoint, method = 'GET', body = null) {
+  async function apiCall(endpoint, method, body) {
+    method = method || 'GET';
     const opts = {
-      method,
+      method: method,
       headers: { 'Authorization': auth, 'Content-Type': 'application/json' }
     };
     if (body) opts.body = JSON.stringify(body);
@@ -323,7 +332,7 @@ const HTML = `<!DOCTYPE html>
   async function addToken() {
     const token = document.getElementById('tokenInput').value.trim();
     if (!token) return alert('🌸 Paste a token!');
-    const data = await apiCall('/api/add-token', 'POST', { token });
+    const data = await apiCall('/api/add-token', 'POST', { token: token });
     if (data.success) {
       document.getElementById('tokenInput').value = '';
       loadTokens();
@@ -342,19 +351,24 @@ const HTML = `<!DOCTYPE html>
         container.innerHTML = '<div style="color:#ffb6c155; text-align:center; padding:15px;">💖 No tokens yet</div>';
         return;
       }
-      container.innerHTML = data.map(t => 
-        \`<div class="token-item">
-          <span>🔑 \${t.id.slice(-8)}</span>
-          <span class="\${t.hasBot ? 'online' : 'offline'}">\${t.hasBot ? '🩷 ONLINE' : '💤 OFFLINE'}</span>
-          <button class="remove" onclick="removeToken('\${t.id}')">✕</button>
-        </div>\`
-      ).join('');
-    } catch(e) {}
+      var html = '';
+      for (var i = 0; i < data.length; i++) {
+        var t = data[i];
+        html += '<div class="token-item">';
+        html += '<span>🔑 ' + t.id.slice(-8) + '</span>';
+        html += '<span class="' + (t.hasBot ? 'online' : 'offline') + '">' + (t.hasBot ? '🩷 ONLINE' : '💤 OFFLINE') + '</span>';
+        html += '<button class="remove" onclick="removeToken(\'' + t.id + '\')">✕</button>';
+        html += '</div>';
+      }
+      container.innerHTML = html;
+    } catch(e) {
+      console.error(e);
+    }
   }
 
   async function removeToken(id) {
     if (!confirm('Remove this token?')) return;
-    const data = await apiCall('/api/remove-token', 'POST', { id });
+    const data = await apiCall('/api/remove-token', 'POST', { id: id });
     if (data.success) loadTokens();
   }
 
@@ -381,29 +395,34 @@ const HTML = `<!DOCTYPE html>
         container.innerHTML = '<div style="color:#ffb6c155; text-align:center; padding:20px; grid-column:1/-1;">💤 No active bots</div>';
         return;
       }
-      container.innerHTML = data.map(b => 
-        \`<div class="bot-card">
-          <div class="name">\${b.username || 'Bot'}</div>
-          <div class="status">\${b.inVC ? '🔊 In VC' : '💤 Idle'}</div>
-          <div class="controls">
-            <button onclick="botAction('\${b.id}','join')">🔊 Join</button>
-            <button onclick="botAction('\${b.id}','leave')">🚪 Leave</button>
-            <button onclick="botAction('\${b.id}','volume','10')">🔊 1000%</button>
-          </div>
-        </div>\`
-      ).join('');
-    } catch(e) {}
+      var html = '';
+      for (var i = 0; i < data.length; i++) {
+        var b = data[i];
+        html += '<div class="bot-card">';
+        html += '<div class="name">' + (b.username || 'Bot') + '</div>';
+        html += '<div class="status">' + (b.inVC ? '🔊 In VC' : '💤 Idle') + '</div>';
+        html += '<div class="controls">';
+        html += '<button onclick="botAction(\'' + b.id + '\',\'join\')">🔊 Join</button>';
+        html += '<button onclick="botAction(\'' + b.id + '\',\'leave\')">🚪 Leave</button>';
+        html += '<button onclick="botAction(\'' + b.id + '\',\'volume\',\'10\')">🔊 1000%</button>';
+        html += '</div></div>';
+      }
+      container.innerHTML = html;
+    } catch(e) {
+      console.error(e);
+    }
   }
 
-  async function botAction(id, action, value = null) {
-    const data = await apiCall('/api/bot-action', 'POST', { id, action, value });
+  async function botAction(id, action, value) {
+    value = value || null;
+    const data = await apiCall('/api/bot-action', 'POST', { id: id, action: action, value: value });
     if (data.success) loadBots();
   }
 
   async function renameAll() {
     const name = document.getElementById('newNameInput').value.trim();
     if (!name) return alert('🌸 Enter a name!');
-    const data = await apiCall('/api/rename-all', 'POST', { name });
+    const data = await apiCall('/api/rename-all', 'POST', { name: name });
     document.getElementById('statusMsg').textContent = '✏️ Renamed ' + (data.renamed || 0) + ' bot(s)!';
     loadBots();
   }
@@ -417,7 +436,7 @@ const HTML = `<!DOCTYPE html>
   async function inviteJoin() {
     const invite = document.getElementById('inviteInput').value.trim();
     if (!invite) return alert('🌸 Enter an invite!');
-    const data = await apiCall('/api/invite-join', 'POST', { invite });
+    const data = await apiCall('/api/invite-join', 'POST', { invite: invite });
     document.getElementById('statusMsg').textContent = '🚀 ' + (data.joined || 0) + ' bot(s) joined!';
     loadBots();
   }
@@ -546,7 +565,7 @@ app.post('/api/bot-action', auth, (req, res) => {
     if (action === 'join') bot.inVC = true;
     if (action === 'leave') bot.inVC = false;
     if (action === 'volume') {
-      // Volume control
+      // Volume control - just acknowledge
     }
   }
   res.json({ success: true });
